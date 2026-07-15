@@ -1,6 +1,7 @@
 mod cli;
 mod commands;
 mod compress;
+mod config;
 mod db;
 mod docker;
 mod doctor;
