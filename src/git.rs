@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use eyre::{eyre, Context};
 use tokio::process::Command;
 
@@ -36,4 +38,17 @@ pub async fn current_origin() -> eyre::Result<String> {
         .to_owned();
 
     Ok(origin)
+}
+
+pub async fn git_clone(url: &str, dir: &Path) -> eyre::Result<()> {
+    Command::new("git")
+        .arg("clone")
+        .arg(url)
+        .arg(dir)
+        .output()
+        .await
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to clone repository")?;
+
+    Ok(())
 }

@@ -52,6 +52,22 @@ impl Project {
             Project::Nest => Some("nest-app"),
         }
     }
+
+    pub fn git_url(&self) -> Option<&str> {
+        match self {
+            Project::Traefik => None,
+            Project::Infra => Some("git@bitbucket.org:humtravel/hbt-docker-dev-environment.git"),
+            Project::Gateway => Some("git@bitbucket.org:humtravel/gateway-app.git"),
+            Project::Rates => Some("git@bitbucket.org:humtravel/rates.git"),
+            Project::Search => Some("git@bitbucket.org:humtravel/search.git"),
+            Project::Operations => Some("git@bitbucket.org:humtravel/operations.git"),
+            Project::Foundation => Some("git@bitbucket.org:humtravel/foundation.git"),
+            Project::Products => Some("git@bitbucket.org:humtravel/products.git"),
+            Project::ApiGateway => Some("git@bitbucket.org:humtravel/apigateway.git"),
+            Project::App => Some("git@bitbucket.org:humtravel/hummingbird-app.git"),
+            Project::Nest => Some("git@bitbucket.org:humtravel/nest-app.git"),
+        }
+    }
 }
 
 impl Display for Project {
@@ -76,11 +92,15 @@ impl Display for Project {
     }
 }
 
-pub fn get_project_dir(project: &Project) -> eyre::Result<std::path::PathBuf> {
-    let hbt_root = get_hbt_root()?;
-    let project_dir = hbt_root.join(project.name());
+pub fn get_project_dir(project: &Project) -> eyre::Result<Option<std::path::PathBuf>> {
+    let Some(project_dir) = project.dir_name() else {
+        return Ok(None);
+    };
 
-    Ok(project_dir)
+    let hbt_root = get_hbt_root()?;
+    let project_dir = hbt_root.join(project_dir);
+
+    Ok(Some(project_dir))
 }
 
 pub async fn set_current_project(project: &Project) -> eyre::Result<()> {
