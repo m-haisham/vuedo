@@ -19,6 +19,8 @@ pub enum Project {
     DevEnvironment,
     App,
     Nest,
+    SoPackageSerializer,
+    ApiClient,
 }
 
 impl Project {
@@ -36,6 +38,8 @@ impl Project {
             Project::DevEnvironment => "dev-environment",
             Project::App => "app",
             Project::Nest => "nest",
+            Project::SoPackageSerializer => "so-package-serializer",
+            Project::ApiClient => "api-client",
         }
     }
 
@@ -53,6 +57,8 @@ impl Project {
             Project::DevEnvironment => Some("hbt-docker-dev-environment"),
             Project::App => Some("hummingbird-app"),
             Project::Nest => Some("nest-app"),
+            Project::SoPackageSerializer => Some("so-package-serializer"),
+            Project::ApiClient => Some("api-client"),
         }
     }
 
@@ -72,6 +78,10 @@ impl Project {
             }
             Project::App => Some("git@bitbucket.org:humtravel/hummingbird-app.git"),
             Project::Nest => Some("git@bitbucket.org:humtravel/nest-app.git"),
+            Project::SoPackageSerializer => {
+                Some("git@bitbucket.org:humtravel/so-package-serializer.git")
+            }
+            Project::ApiClient => Some("git@bitbucket.org:humtravel/api-client.git"),
         }
     }
 
@@ -89,6 +99,8 @@ impl Project {
             Project::DevEnvironment => false,
             Project::App => true,
             Project::Nest => true,
+            Project::SoPackageSerializer => false,
+            Project::ApiClient => false,
         }
     }
 }
@@ -111,6 +123,8 @@ impl Display for Project {
                 Project::DevEnvironment => "DevEnvironment",
                 Project::App => "App",
                 Project::Nest => "Nest",
+                Project::SoPackageSerializer => "SoPackageSerializer",
+                Project::ApiClient => "ApiClient",
             }
         )
     }

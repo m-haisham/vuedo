@@ -3,6 +3,45 @@ use std::path::Path;
 use eyre::{eyre, Context};
 use tokio::process::Command;
 
+#[derive(Debug)]
+pub enum Repository {
+    Gateway,
+    Rates,
+    Search,
+    Operations,
+    Foundation,
+    Products,
+    ApiGateway,
+    DevEnvironment,
+    App,
+    Nest,
+    SoPackageSerializer,
+    ApiClient,
+}
+
+impl Repository {
+    pub fn url(&self) -> &str {
+        match self {
+            Repository::Gateway => "git@bitbucket.org:humtravel/gateway-app.git",
+            Repository::Rates => "git@bitbucket.org:humtravel/rates.git",
+            Repository::Search => "git@bitbucket.org:humtravel/search.git",
+            Repository::Operations => "git@bitbucket.org:humtravel/operations.git",
+            Repository::Foundation => "git@bitbucket.org:humtravel/foundation.git",
+            Repository::Products => "git@bitbucket.org:humtravel/products.git",
+            Repository::ApiGateway => "git@bitbucket.org:humtravel/apigateway.git",
+            Repository::DevEnvironment => {
+                "git@bitbucket.org:humtravel/hbt-docker-dev-environment.git"
+            }
+            Repository::App => "git@bitbucket.org:humtravel/hummingbird-app.git",
+            Repository::Nest => "git@bitbucket.org:humtravel/nest-app.git",
+            Repository::SoPackageSerializer => {
+                "git@bitbucket.org:humtravel/so-package-serializer.git"
+            }
+            Repository::ApiClient => "git@bitbucket.org:humtravel/api-client.git",
+        }
+    }
+}
+
 pub async fn checkout(branch_name: &str) -> eyre::Result<()> {
     let output = Command::new("git")
         .arg("checkout")
