@@ -153,8 +153,9 @@ pub async fn compose_down(compose_file: &str, args: &[String]) -> eyre::Result<(
     Ok(())
 }
 
-pub async fn compose_exec(args: &[&str]) -> eyre::Result<()> {
+pub async fn compose_exec(compose_file: &str, args: &[&str]) -> eyre::Result<()> {
     let mut cmd = tokio::process::Command::new("docker-compose");
+    cmd.args(["-f", compose_file]);
     cmd.args(["exec"]);
     cmd.args(args);
 

@@ -7,8 +7,9 @@ use strum::IntoEnumIterator;
 
 use crate::{
     context::AppContext,
-    docker, env, git,
-    project::{read_project_env, set_current_project, Project},
+    docker::{self, Container},
+    git,
+    project::{read_project_env, Project},
     ui::BrushContext,
 };
 
@@ -54,7 +55,7 @@ pub async fn checkout(
         let checkout_result = git::checkout_first(&[branch.as_str(), "develop"]).await;
 
         let migrate_result = if migrate {
-            let migrate_result = migrate_project_db(&project).await;
+            let migrate_result = migrate_project_db(&project, &container).await;
             if let Err(e) = migrate_result {
                 tracing::error!("Failed to migrate database for project: {}", e);
                 continue;
@@ -93,7 +94,7 @@ pub async fn checkout(
     Ok(())
 }
 
-async fn migrate_project_db(project: &Project) -> eyre::Result<()> {
+async fn migrate_project_db(project: &Project, container: &Container) -> eyre::Result<()> {
     tracing::info!("Migrating database for project: {}", project);
 
     #[derive(Debug, Deserialize)]
@@ -116,12 +117,9 @@ async fn migrate_project_db(project: &Project) -> eyre::Result<()> {
         return Ok(());
     }
 
-    set_current_project(project)
-        .await
-        .map_err(|e| eyre!(e))
-        .wrap_err("Failed to set current project")?;
+    let compose_file = container.compose_file()?;
 
-    docker::compose_exec(&["php-fpm", "php", "artisan", "migrate"])
+    docker::compose_exec(&compose_file, &["php-fpm", "php", "artisan", "migrate"])
         .await
         .map_err(|e| eyre!(e))
         .wrap_err("Failed to run database migrations")?;
