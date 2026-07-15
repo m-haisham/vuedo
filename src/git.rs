@@ -2,6 +2,7 @@ use std::{
     collections::BTreeMap,
     fmt::{self, Display},
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use eyre::{bail, eyre, Context};
@@ -100,6 +101,28 @@ impl Display for Repository {
                 Repository::ApiClients => "api-clients",
             }
         )
+    }
+}
+
+impl FromStr for Repository {
+    type Err = eyre::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "gateway" => Ok(Repository::Gateway),
+            "rates" => Ok(Repository::Rates),
+            "search" => Ok(Repository::Search),
+            "operations" => Ok(Repository::Operations),
+            "foundation" => Ok(Repository::Foundation),
+            "products" => Ok(Repository::Products),
+            "apigateway" => Ok(Repository::ApiGateway),
+            "dev-environment" => Ok(Repository::DevEnvironment),
+            "app" => Ok(Repository::App),
+            "nest" => Ok(Repository::Nest),
+            "so-package-serializer" => Ok(Repository::SoPackageSerializer),
+            "api-clients" => Ok(Repository::ApiClients),
+            _ => Err(eyre!("Invalid repository name")),
+        }
     }
 }
 

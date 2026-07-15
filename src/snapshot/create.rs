@@ -91,9 +91,13 @@ pub async fn create_repository_snapshots(
 ) -> eyre::Result<Vec<RepositorySnapshot>> {
     tracing::info!("Creating repository snapshots...");
 
-    let mut snapshots = vec![];
+    let repositories_to_snapshot = match options.include_repositories.clone() {
+        Some(repositories) => repositories,
+        _ => Repository::iter().collect_vec(),
+    };
 
-    for repository in Repository::iter() {
+    let mut snapshots = vec![];
+    for repository in repositories_to_snapshot {
         let snapshot = repository_snapshot(options, temp_dir, working_dir, repository).await?;
         snapshots.push(snapshot);
     }

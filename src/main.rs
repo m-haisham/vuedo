@@ -103,10 +103,12 @@ pub async fn main() -> eyre::Result<()> {
         },
         Commands::Snapshot { command } => match command {
             SnapshotCommands::Create {
+                include_repositories,
                 generate_patch,
                 include_databases,
             } => {
                 let options = SnapshotOptions {
+                    include_repositories,
                     generate_patch,
                     include_databases,
                 };

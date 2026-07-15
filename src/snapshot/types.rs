@@ -7,6 +7,7 @@ use crate::{git::Repository, project::Project};
 
 #[derive(Debug)]
 pub struct SnapshotOptions {
+    pub include_repositories: Option<Vec<Repository>>,
     pub generate_patch: bool,
     pub include_databases: Option<Vec<String>>,
 }

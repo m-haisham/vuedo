@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-use crate::kebab::Kebab;
+use crate::{git::Repository, kebab::Kebab};
 
 /// A command-line tool for interacting with the Hummingbird development stack.
 ///
@@ -152,6 +152,11 @@ pub enum GlobalCommands {
 pub enum SnapshotCommands {
     /// Create a snapshot of the project
     Create {
+        /// Include specific repositories in the snapshot or all repositories if not specified
+        #[arg(long, short = 'r', value_delimiter = ',', num_args = 1..)]
+        include_repositories: Option<Vec<Repository>>,
+
+        /// Generate a patch file for the snapshot with current changes for each repository
         #[arg(long, short = 'p')]
         generate_patch: bool,
 
