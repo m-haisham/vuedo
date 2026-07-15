@@ -1,5 +1,5 @@
-use bollard::Docker;
 use color_eyre::Section;
+use eyre::eyre;
 
 use crate::{context::AppContext, docker::ping_docker, ui::BrushContext};
 
@@ -11,10 +11,13 @@ pub async fn start_work(context: AppContext) -> eyre::Result<()> {
 
     ping_docker()
         .await
+        .map_err(|e| eyre!(e))
         .with_suggestion(|| "Failed to connect to docker. Make sure docker is running.")?;
 
     brush.heading("Starting project containers...")?;
     start_all_projects(&[]).await?;
+
+    // TODO: Check for inconsistencies between git branches
 
     Ok(())
 }
