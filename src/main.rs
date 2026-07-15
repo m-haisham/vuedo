@@ -40,9 +40,10 @@ pub async fn main() -> eyre::Result<()> {
         .wrap_err("Failed to initialize app context")?;
 
     let level = match cli.verbose {
-        0 => LevelFilter::WARN,
-        1 => LevelFilter::INFO,
-        2 => LevelFilter::DEBUG,
+        0 => LevelFilter::OFF,
+        1 => LevelFilter::WARN,
+        2 => LevelFilter::INFO,
+        3 => LevelFilter::DEBUG,
         _ => LevelFilter::TRACE,
     };
 
