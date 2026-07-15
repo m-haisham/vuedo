@@ -41,7 +41,7 @@ pub async fn print_branches(mut context: AppContext) -> eyre::Result<()> {
         let style = Style::new();
 
         let style = if Some(&project) == current_project.as_ref() {
-            style.underlined()
+            style.bold()
         } else {
             style
         };
