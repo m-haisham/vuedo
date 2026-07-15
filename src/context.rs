@@ -40,8 +40,13 @@ impl WorkingDir {
     }
 
     pub fn change_dir(&mut self, path: PathBuf) -> eyre::Result<()> {
+        if self.path == path {
+            return Ok(());
+        }
+
         std::env::set_current_dir(&path)?;
         self.path = path;
+
         Ok(())
     }
 
