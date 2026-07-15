@@ -171,6 +171,7 @@ hbt some-custom-command arg1 arg2
    ```
 
 4. Increase verbosity for debugging:
+
    ```bash
    hbt -vvv app up
    ```
