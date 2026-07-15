@@ -1394,6 +1394,7 @@ dependencies = [
  "clap",
  "color-eyre",
  "config",
+ "console",
  "dialoguer",
  "dirs",
  "dotenvy",

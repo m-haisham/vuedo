@@ -1,20 +1,33 @@
+use console::Term;
+
 use crate::config::{read_config, Config};
 use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct AppContext {
+    pub verbose: u8,
+    pub non_interactive: bool,
     pub config: Config,
     pub working_dir: WorkingDir,
+    pub term: Term,
 }
 
 impl AppContext {
-    pub fn new() -> eyre::Result<Self> {
+    pub fn new(verbose: u8, non_interactive: bool) -> eyre::Result<Self> {
         let config = read_config()?;
         let working_dir = WorkingDir::new()?;
+        let term = Term::stdout();
         Ok(Self {
+            verbose,
+            non_interactive,
             config,
             working_dir,
+            term,
         })
+    }
+
+    pub fn is_verbose(&self) -> bool {
+        self.verbose > 0
     }
 }
 
