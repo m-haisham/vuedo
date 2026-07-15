@@ -9,7 +9,7 @@ pub struct Health {
 impl Display for Health {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Environment:")?;
-        writeln!(f, "{}", self.env)
+        write!(f, "{}", self.env)
     }
 }
 
