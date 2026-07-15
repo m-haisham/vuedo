@@ -3,10 +3,10 @@ mod docker;
 mod doctor;
 mod git;
 mod global;
-mod gzip;
 mod infra;
 mod kebab;
 mod project;
+mod zip;
 
 use std::path::PathBuf;
 
@@ -41,6 +41,7 @@ pub async fn main() -> eyre::Result<()> {
             let health = doctor::check_health().await?;
             println!("{}", health);
         }
+        Commands::Dump => {}
         Commands::Global { command } => match command {
             GlobalCommands::Up { rest } => {
                 global::start_all_projects(&rest).await?;
@@ -163,7 +164,7 @@ async fn project_command(app: String, command: ProjectCommands) -> eyre::Result<
             let dump = docker::mysql_dump(&app, &infra_env.mysql_db_password).await?;
             tracing::info!("Dumped {} bytes", dump.len());
 
-            let dump = gzip::gzip(&dump).await?;
+            let dump = zip::gzip(&dump).await?;
             tracing::info!("Compressed dump to {} bytes", dump.len());
 
             std::fs::write(&dump_file, dump)
@@ -182,7 +183,7 @@ async fn project_command(app: String, command: ProjectCommands) -> eyre::Result<
 
             tracing::info!("Read dump from file {} bytes", dump.len());
 
-            let dump = gzip::gunzip(&dump).await?;
+            let dump = zip::gunzip(&dump).await?;
             tracing::info!("Decompressed dump to {} bytes", dump.len());
 
             docker::mysql_restore(&app, &infra_env.mysql_db_password, dump.as_bytes()).await?;

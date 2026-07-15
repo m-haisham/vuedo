@@ -27,6 +27,8 @@ pub struct Cli {
 pub enum Commands {
     /// Check your configuration for potential issues
     Doctor,
+    /// Dump the mysql databases
+    Dump,
     /// Run a command for all projects
     Global {
         #[command(subcommand)]
