@@ -273,6 +273,24 @@ pub async fn git_diff() -> eyre::Result<String> {
     }
 }
 
+pub async fn git_apply(path: &Path) -> eyre::Result<()> {
+    let output = Command::new("git")
+        .arg("apply")
+        .arg(path)
+        .output()
+        .await
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to apply patch")?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8(output.stderr)
+            .unwrap_or_else(|e| format!("Failed to convert git apply stderr to string: {:?}", e));
+        Err(eyre!("Failed to apply patch: {}", stderr))
+    }
+}
+
 #[derive(Debug)]
 pub enum GitChangeStatus {
     Modified,

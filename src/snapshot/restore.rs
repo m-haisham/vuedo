@@ -63,12 +63,21 @@ async fn restore_repository(
     snapshot_dir: &Path,
     repository_snapshot: &RepositorySnapshot,
 ) -> eyre::Result<()> {
+    tracing::info!("Restoring repository: {}", repository_snapshot.repository);
+
     let repository_dir = repository_snapshot.repository.dir()?;
 
     working_dir
         .with_working_dir(&repository_dir, async |_| {
-            git::set_origin(&repository_snapshot.origin).await?;
+            // Disabled as it might be too risky to do automatically.
+            // git::set_origin(&repository_snapshot.origin).await?;
+
             git::checkout(&repository_snapshot.branch).await?;
+
+            if let Some(patch_file) = &repository_snapshot.patch_file {
+                let full_path = &snapshot_dir.join(&patch_file.path);
+                git::git_apply(&full_path).await?;
+            }
             Ok(())
         })
         .await?;
