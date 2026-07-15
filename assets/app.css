@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/* Custom font stack — drop your .woff2/.ttf files into assets/fonts/ and
+   reference them here. vuedo base64-inlines these at runtime so the PDF makes
+   no network requests. Edit the family name + the url to match your files. */
+@theme {
+  --font-sans: "MyFont", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Example — replace `MyFont.woff2` with your actual filename:
+@font-face {
+  font-family: "MyFont";
+  src: url("/assets/fonts/MyFont.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+*/

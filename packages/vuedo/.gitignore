@@ -1,0 +1,11 @@
+# Compiled library output (built by `tsc`)
+dist/
+generated/
+
+# Transient build config written by the vuedo CLI (src/cli.ts)
+.vuedo-build-*.ts
+
+# Test artifacts
+.tmp-dist/
+.single/
+*.tsbuildinfo

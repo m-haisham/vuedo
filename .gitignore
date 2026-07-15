@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output (root consumer + library package)
+dist/
+dist-server/
+packages/*/dist/
+
+# Test / coverage artifacts
+coverage/
+*.tsbuildinfo
+
+# Temporary verification / scratch dirs
+.verify/
+.verify-dist/
+.tmp-dist/
+.single/
+
+# Library build: transient vite config written next to dist/cli.js
+packages/*/.vuedo-build-*.ts
+
+# Generated template-props types (emitted by @hshm/vuedo on build / `vuedo types`)
+src/generated/
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Generated PDFs (e.g. test output)
+*.pdf

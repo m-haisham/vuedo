@@ -1,0 +1,19 @@
+# Infrastructure the @hshm/vuedo library talks to. There is no "orchestrator"
+# image here anymore — the library runs *inside* the consumer app's own
+# container (this repo's root service). Only Gotenberg, Browserless, and Redis
+# are standalone.
+#
+#   docker compose -f deploy/docker-compose.yml up
+#
+services:
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    ports: ["3000:3000"]
+
+  browserless:
+    image: browserless/chrome:latest
+    ports: ["3001:3000"]
+
+  redis:
+    image: redis:alpine
+    ports: ["6379:6379"]
