@@ -1,0 +1,10 @@
+# Compiled library output (built by `tsc`)
+dist/
+
+# Transient build config written by the pdf-kit CLI (src/cli.ts)
+.vuedf-build-*.ts
+
+# Test artifacts
+.tmp-dist/
+.single/
+*.tsbuildinfo

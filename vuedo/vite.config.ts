@@ -1,18 +1,18 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
-import { viteSingleFile } from "vite-plugin-singlefile";
+import { pdfKit } from "@hshm/vuedf/vite";
+import path from "node:path";
 
-// SSR build for the orchestrator renderer (bundled into dist/entry-server.js),
-// plus a client build that inlines all assets as Base64 data URIs (per §3.3).
+// Path A (§4.4): the host already has a Vite config, so the pdfKit plugin
+// piggybacks on the normal `vite build` to compile every template under
+// templatesDir as an SSR entry and drop pdf-manifest.json into dist/.
 export default defineConfig({
-  plugins: [vue(), viteSingleFile()],
+  plugins: [
+    vue(),
+    pdfKit({ templatesDir: path.resolve("src/pdf-templates"), outDir: "dist" }),
+  ],
   build: {
+    outDir: "dist",
     assetsInlineLimit: 100_000_000,
-    cssCodeSplit: false,
-    rollupOptions: {
-      output: {
-        inlineDynamicImports: true,
-      },
-    },
   },
 });

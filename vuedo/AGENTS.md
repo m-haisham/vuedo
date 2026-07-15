@@ -4,96 +4,105 @@ Guidance for AI agents and contributors working in this repository.
 
 ## Project Overview
 
-**vuedo** is an enterprise PDF Generation Microservice. It transforms JSON data
-into pixel-perfect PDFs by rendering Vue.js + Tailwind templates to HTML via SSR
-and converting that HTML to PDF with Gotenberg (headless Chromium).
+This is a **pnpm workspace** with two parts:
+
+- **`packages/vuedf`** — `@hshm/vuedf`, an embeddable **library** (not a
+  service) that turns Vue+Tailwind templates into PDFs: Vue SSR → asset-inlined
+  HTML → Gotenberg (headless Chromium). Consumers keep their own HTTP server and
+  routes; the library exposes `createPdfKit()` → `renderHtml()` / `generatePdf()`.
+- **root (`vuedo`)** — an example **consumer**: a plain Elysia backend that
+  installs `@hshm/vuedf` (via `workspace:*`) and calls it from its own route.
 
 The authoritative architecture/spec is [`docs/reference.md`](docs/reference.md).
 When in doubt, follow it.
 
-## Repository Status
+## Library Public API (`@hshm/vuedf`)
 
-Implemented and tested. The architecture follows the **single `src/server.ts`**
-design from the reference: one Elysia app, one entrypoint, with an `if (isDev)`
-branch choosing the render strategy (Vite `ssrLoadModule` in dev, static
-`dist/entry-server.js` import in prod).
+Three exports (see `docs/reference.md` §4):
 
-## Tech Stack
+- **`@hshm/vuedf`** — `createPdfKit(options)` returning `{ renderHtml, generatePdf, close }`.
+- **`@hshm/vuedf/vite`** — a Vite plugin (`pdfKit({ templatesDir, outDir })`):
+  registers the host's dev server (tier 2) and, on `vite build`, compiles every
+  template as an SSR entry and writes `pdf-manifest.json`.
+- **`pdf-kit` CLI** — `pdf-kit build --templates <dir> --out <dir>` for hosts
+  with no Vite of their own (Path B); it just drives the same plugin.
 
-- **Orchestrator:** Node.js 20+, Elysia, TypeBox validation
-- **Renderer:** Vue 3 SSR via `@vue/server-renderer`
-- **PDF engine:** Gotenberg (Chromium) — `GOTENBERG_URL`
-- **Measurement:** Browserless (Chromium) — `BROWSERLESS_URL` (planned)
-- **Cache:** Redis — `REDIS_URL` (planned)
-- **Build:** Vite (dev middleware mode + prod SSR build), pnpm
-- **Test:** Vitest
+`vite` is an **optional peer dependency** — production (manifest path) never
+imports it.
 
-## Two Runtime Modes (critical)
+## Dev-Mode Rendering — Three Tiers (§4.3)
 
-- **Dev (`pnpm dev`):** single process. Vite runs in **middleware mode** inside
-  the Elysia process; `vite.ssrLoadModule()` compiles templates on every request.
-  **No `vite build` step.** Live HMR preview at `/dev/preview.html`, template
-  list at `/`.
-- **Prod (`pnpm build && pnpm start`):** loads pre-built `dist/entry-server.js`.
-  Vite is a `devDependency` only and absent from the production image.
+`renderer.ts` picks a Vite instance per render call, in priority order:
 
-`src/server.ts` branches on `NODE_ENV` once at boot to pick the `render`
-function; routes, validation, and the Gotenberg call are identical in both modes.
+1. **explicit** — one passed by the caller (tests/advanced).
+2. **shared** — the host's own Vite server, registered by the plugin's
+   `configureServer` hook via `src/dev-registry.ts`.
+3. **owned** — the library lazily boots its own middleware-mode instance, once.
 
-## Project Layout
+Production takes none of this: `createPdfKit({ mode: 'production' })` reads the
+manifest and `import()`s the pre-compiled SSR module. No Vite involved.
+
+## Library Layout (`packages/vuedf/src`)
 
 ```
-src/
-  templates/        Vue SFCs — the PDF templates (Invoice.vue, InvoiceHeader.vue, InvoiceFooter.vue)
-  assets/           static assets referenced by templates
-  shared-types/     types shared between Vue props and Elysia schema
-  entry-server.ts   SSR render entry (renderPdfBody) — the one file Vite's --ssr build needs
-  dev/              preview.html, preview-main.ts, fixtures/
-  server.ts         ONE Elysia app + entrypoint; branches on NODE_ENV at boot
-deploy/             production Docker files (Dockerfile, docker-compose.yml)
-vite.config.ts      SSR build + Base64 asset inlining (§3.3)
+index.ts            createPdfKit() — the only required consumer import
+renderer.ts         dev render strategy (3-tier Vite selection) + closeOwnedRenderer
+dev-registry.ts     module-level slot the plugin writes and the core reads
+manifest.ts         discoverTemplates / writeManifest / loadManifest
+render-component.ts  shared Vue SSR (createSSRApp + renderToString)
+gotenberg.ts        Gotenberg HTTP client (returns a ReadableStream)
+html.ts             wrapHtml() document shell
+vite-plugin.ts      exported as '@hshm/vuedf/vite'
+cli.ts              exported as bin 'pdf-kit'
+```
+
+## Root Service Layout (`src`)
+
+```
+pdf-templates/      Vue SFCs — the PDF templates (Invoice/InvoiceHeader/InvoiceFooter)
+assets/             static assets referenced by templates (inlined at build)
+shared-types/       types shared between Vue props and Elysia schema
+server.ts           Elysia app + native-http boot; calls createPdfKit()
 ```
 
 ## Commands
 
-- `pnpm install` — install deps
-- `pnpm dev` — zero-build dev server on `:8080` (+ HMR preview, `/` lists templates)
-- `pnpm build` — `vite build --ssr src/entry-server.ts` → `dist/entry-server.js`
-- `pnpm start` — run production server (`NODE_ENV=production`, uses `dist/`)
-- `pnpm test` — Vitest (see Testing Notes)
+- `pnpm install` — install all workspace deps
+- `pnpm --filter @hshm/vuedf build` — compile the library to `packages/vuedf/dist`
+  (**do this first** — the root service and its Vite config import the built lib)
+- `pnpm dev` (root) — dev server on `:8080`; templates hot-compile via the
+  library's tier-3 owned Vite, **no build step**
+- `pnpm build` (root) — `vite build` with the pdfKit plugin → `dist/` + `pdf-manifest.json`
+- `pnpm start` (root) — `NODE_ENV=production` server, reads the manifest
+- `pnpm -r test` — run both suites (library + consumer)
 
 ## Header / Footer
 
-The `POST /api/v1/generate-pdf` body accepts optional `header` and `footer`,
-each shaped like `{ template: string, data: unknown }`. They are rendered
-through the same `render` pipeline as the body and sent to Gotenberg as
-`header.html` / `footer.html` form parts (only when present). `?preview=html`
-composes them inline for dev sanity checks. Example templates:
-`InvoiceHeader.vue`, `InvoiceFooter.vue`.
+`generatePdf(template, data, opts)` accepts optional `opts.header` and
+`opts.footer`, each `{ template, data }`. They render through the same pipeline
+and are sent to Gotenberg as `header.html` / `footer.html` only when present.
+The root service maps its request body's `header`/`footer` straight onto these.
 
 ## Conventions
 
-- Keep `src/shared-types/index.ts` in sync with the Elysia `t.Object` schemas in
+- Keep `src/shared-types/index.ts` in sync with the Elysia `t.Object` schema in
   `src/server.ts`.
-- New templates go in `src/templates/` and must be loadable via
-  `vite.ssrLoadModule('/src/templates/<Name>.vue')`. Register every template in
-  the `registry` in `src/entry-server.ts` so it bundles into `dist/`.
-- All assets must inline as Base64 at build time (no runtime network fetches).
-- Don't duplicate route/orchestration logic per mode; vary only the `render`
-  function chosen by the `if (isDev)` branch in `src/server.ts`.
+- New templates: drop a `.vue` file in the consumer's `templatesDir` — that's
+  it. `discoverTemplates` finds them for dev (ssrLoadModule) and build (SSR
+  entry) automatically; no registry to maintain.
+- All assets inline as Base64 at build time (no runtime network fetches).
+- The library must never import `vite` at module top level (only dynamically, in
+  the tier-3 fallback and the CLI) so the optional-peer-dependency guarantee
+  holds. `vite-plugin.ts` uses `import type` only.
 
 ## Testing Notes (§7)
 
-- E2E test (`test/pdf.e2e.test.ts`) targets the **production** renderer path:
-  builds `dist/` (`vite build --ssr`) and drives `src/server.ts` with
-  `NODE_ENV=production`. It posts to the endpoint and the request is rendered
-  through the real Gotenberg Chromium container, then the returned PDF is parsed
-  with `pdf-parse` to assert on text content and page count. Requires a running
-  Gotenberg — bring it up with `docker compose -f deploy/docker-compose.yml up`
-  (or set `GOTENBERG_URL`); the suite **skips automatically** when Gotenberg is
-  unreachable, so `pnpm test` stays green without Docker.
-- A lighter suite (`test/render.dev.test.ts`) calls the dev branch's `render`
-  logic directly via `vite.ssrLoadModule` for fast template-author feedback
-  without Gotenberg.
-- `test/app.test.ts` covers `src/server.ts` routing, header/footer composition in
-  `?preview=html`, and TypeBox validation without needing a PDF engine.
+- **Library** (`packages/vuedf/test`): `dev.test.ts` drives `createPdfKit` in
+  development mode against a fixture `templatesDir` (tier-3 ssrLoadModule);
+  `manifest.prod.test.ts` runs the real build (`runBuild`) then renders via the
+  manifest in production mode.
+- **Consumer** (root `test`): `app.test.ts` hits the Elysia route with
+  `?preview=html` (no Gotenberg) and checks TypeBox validation; `pdf.e2e.test.ts`
+  builds `dist/`, renders through **real Gotenberg**, and parses the PDF with
+  `pdf-parse`. It **skips automatically** when Gotenberg is unreachable — bring
+  it up with `docker compose -f deploy/docker-compose.yml up` (§6, infra only).
