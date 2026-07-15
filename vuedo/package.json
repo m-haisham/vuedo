@@ -1,13 +1,32 @@
 {
   "name": "vuedo",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Enterprise PDF Generation Microservice (Vue SSR + Gotenberg)",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx watch src/dev-server.ts",
+    "build": "vite build --ssr src/entry-server.ts --outDir dist && vite build --outDir dist/client",
+    "start": "node dist-server/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
-  "keywords": [],
+  "keywords": ["pdf", "vue", "ssr", "gotenberg", "elysia"],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.14.0"
+  "packageManager": "pnpm@10.14.0",
+  "dependencies": {
+    "@elysiajs/node": "^1.0.0",
+    "elysia": "^1.0.0",
+    "vue": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "@vue/server-renderer": "^3.4.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.2.0",
+    "vite-plugin-singlefile": "^2.0.0",
+    "vitest": "^1.6.0"
+  }
 }
