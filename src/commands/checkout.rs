@@ -35,10 +35,9 @@ pub async fn checkout(
     };
 
     let draw = DrawContext::new_from_context(&context);
-    let branch_output = format!("'{branch}'");
     draw.write_line(&format!(
         "Checking out branch: {} (fallback to 'develop')",
-        branch_output.bold()
+        branch.bold()
     ))?;
 
     for project in Project::iter() {
