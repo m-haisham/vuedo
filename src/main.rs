@@ -17,14 +17,14 @@ use std::{
 };
 
 use clap::Parser;
-use cli::{Cli, Commands, GlobalCommands};
+use cli::{Cli, Commands, GlobalCommands, ProjectCommands};
 use dialoguer::{theme::ColorfulTheme, Confirm};
 use env::get_hbt_root;
 use eyre::{eyre, Context};
 use git::current_branch;
 use infra::set_current_infra;
 use kebab::kebabify;
-use project::{dir_name_to_project, set_current_project, Project, ProjectCommands};
+use project::{dir_name_to_project, set_current_project, Project};
 use tracing::level_filters::LevelFilter;
 
 #[tokio::main]
@@ -185,38 +185,38 @@ pub async fn main() -> eyre::Result<()> {
                 global::start_all_projects(&rest).await?;
             }
         },
-        Commands::Traefik { args } => {
-            project_command_from_args(Project::Traefik, args).await?;
+        Commands::Traefik { command } => {
+            project_command(Project::Traefik, command).await?;
         }
-        Commands::Infra { args } => {
-            project_command_from_args(Project::Infra, args).await?;
+        Commands::Infra { command } => {
+            project_command(Project::Infra, command).await?;
         }
-        Commands::Gateway { args } => {
-            project_command_from_args(Project::Gateway, args).await?;
+        Commands::Gateway { command } => {
+            project_command(Project::Gateway, command).await?;
         }
-        Commands::Rates { args } => {
-            project_command_from_args(Project::Rates, args).await?;
+        Commands::Rates { command } => {
+            project_command(Project::Rates, command).await?;
         }
-        Commands::Search { args } => {
-            project_command_from_args(Project::Search, args).await?;
+        Commands::Search { command } => {
+            project_command(Project::Search, command).await?;
         }
-        Commands::Operations { args } => {
-            project_command_from_args(Project::Operations, args).await?;
+        Commands::Operations { command } => {
+            project_command(Project::Operations, command).await?;
         }
-        Commands::Foundation { args } => {
-            project_command_from_args(Project::Foundation, args).await?;
+        Commands::Foundation { command } => {
+            project_command(Project::Foundation, command).await?;
         }
-        Commands::Products { args } => {
-            project_command_from_args(Project::Products, args).await?;
+        Commands::Products { command } => {
+            project_command(Project::Products, command).await?;
         }
-        Commands::Api { args } => {
-            project_command_from_args(Project::ApiGateway, args).await?;
+        Commands::Api { command } => {
+            project_command(Project::ApiGateway, command).await?;
         }
-        Commands::App { args } => {
-            project_command_from_args(Project::App, args).await?;
+        Commands::App { command } => {
+            project_command(Project::App, command).await?;
         }
-        Commands::Nest { args } => {
-            project_command_from_args(Project::Nest, args).await?;
+        Commands::Nest { command } => {
+            project_command(Project::Nest, command).await?;
         }
         Commands::Fallthrough(args) => {
             let app = args
@@ -361,12 +361,4 @@ async fn project_command(project: Project, command: ProjectCommands) -> eyre::Re
     }
 
     Ok(())
-}
-
-async fn project_command_from_args(project: Project, args: Vec<String>) -> eyre::Result<()> {
-    let mut project_args = vec![project.name().to_string()];
-    project_args.extend(args.into_iter());
-
-    let command = ProjectCommands::parse_from(project_args.into_iter());
-    project_command(project, command).await
 }

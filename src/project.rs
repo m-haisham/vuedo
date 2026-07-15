@@ -1,13 +1,9 @@
-use clap::Parser;
 use eyre::{eyre, WrapErr};
 use serde::Deserialize;
-use std::{
-    env::set_current_dir,
-    path::{Path, PathBuf},
-};
+use std::{env::set_current_dir, path::Path};
 use strum::EnumIter;
 
-use crate::{env::get_hbt_root, kebab::Kebab};
+use crate::env::get_hbt_root;
 
 #[derive(Debug, Hash, Clone, EnumIter, PartialEq, Eq)]
 pub enum Project {
@@ -120,42 +116,6 @@ pub fn dir_name_to_project(name: &str) -> Option<Project> {
         "nest" | "nest-app" => Some(Project::Nest),
         _ => None,
     }
-}
-
-#[derive(Debug, Parser)]
-pub enum ProjectCommands {
-    /// Start the project
-    Up { rest: Vec<String> },
-    /// Stop the project
-    Down { rest: Vec<String> },
-    /// Restart the project
-    Restart { rest: Vec<String> },
-    /// Start an interactive shell in the project
-    Shell { rest: Vec<String> },
-    /// Alias for node in the project
-    Node { rest: Vec<String> },
-    /// Alias for npm in the project
-    Npm { rest: Vec<String> },
-    /// Alias for yarn in the project
-    Yarn { rest: Vec<String> },
-    /// Alias for php in the project
-    Php { rest: Vec<String> },
-    /// Alias for artisan in the project
-    Artisan { rest: Vec<String> },
-    /// Alias for composer in the project
-    Composer { rest: Vec<String> },
-    /// Alias for phpunit in the project
-    Phpunit { rest: Vec<String> },
-    /// Dump the database
-    Dump {
-        /// A unique key to identify the dump
-        key: Option<Kebab>,
-    },
-    /// Restore from a dump
-    Restore {
-        /// The path to the dump file
-        path: PathBuf,
-    },
 }
 
 #[derive(Debug, Deserialize)]

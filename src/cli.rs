@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 
 use crate::kebab::Kebab;
 
@@ -43,27 +44,60 @@ pub enum Commands {
         command: GlobalCommands,
     },
     /// Run a command for traefik
-    Traefik { args: Vec<String> },
+    Traefik {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
     /// Run a command for infra
-    Infra { args: Vec<String> },
+    Infra {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
     /// Run a command for gateway
-    Gateway { args: Vec<String> },
+    Gateway {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
     /// Run a command for rates
-    Rates { args: Vec<String> },
+    Rates {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
     /// Run a command for search
-    Search { args: Vec<String> },
+    Search {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
     /// Run a command for operations
-    Operations { args: Vec<String> },
+    Operations {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
     /// Run a command for foundation
-    Foundation { args: Vec<String> },
+    Foundation {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
     /// Run a command for products
-    Products { args: Vec<String> },
+    Products {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
     /// Run a command for api
-    Api { args: Vec<String> },
+    Api {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
     /// Run a command for app
-    App { args: Vec<String> },
+    App {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
     /// Run a command for nest
-    Nest { args: Vec<String> },
+    Nest {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
     #[command(external_subcommand)]
     Fallthrough(Vec<String>),
 }
@@ -76,4 +110,40 @@ pub enum GlobalCommands {
     Down { rest: Vec<String> },
     /// Restart all projects
     Restart { rest: Vec<String> },
+}
+
+#[derive(Debug, Parser)]
+pub enum ProjectCommands {
+    /// Start the project
+    Up { rest: Vec<String> },
+    /// Stop the project
+    Down { rest: Vec<String> },
+    /// Restart the project
+    Restart { rest: Vec<String> },
+    /// Start an interactive shell in the project
+    Shell { rest: Vec<String> },
+    /// Alias for node in the project
+    Node { rest: Vec<String> },
+    /// Alias for npm in the project
+    Npm { rest: Vec<String> },
+    /// Alias for yarn in the project
+    Yarn { rest: Vec<String> },
+    /// Alias for php in the project
+    Php { rest: Vec<String> },
+    /// Alias for artisan in the project
+    Artisan { rest: Vec<String> },
+    /// Alias for composer in the project
+    Composer { rest: Vec<String> },
+    /// Alias for phpunit in the project
+    Phpunit { rest: Vec<String> },
+    /// Dump the database
+    Dump {
+        /// A unique key to identify the dump
+        key: Option<Kebab>,
+    },
+    /// Restore from a dump
+    Restore {
+        /// The path to the dump file
+        path: PathBuf,
+    },
 }
