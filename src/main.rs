@@ -62,7 +62,7 @@ pub async fn main() -> eyre::Result<()> {
             setup::setup(cli.non_interactive).await?;
         }
         Commands::Dump { key } => {
-            commands::dump_all_project_dbs(context, key).await?;
+            snapshot::create_snapshot(context).await?;
         }
         Commands::Restore { key } => {
             commands::restore_all_project_dbs(context, key).await?;

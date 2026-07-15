@@ -37,7 +37,7 @@ impl AppContext {
     }
 
     pub fn dirs(&self) -> eyre::Result<ProjectDirs> {
-        directories::ProjectDirs::from("travel", "Hummingbird", &self.name)
+        directories::ProjectDirs::from("travel", "hummingbird", &self.name)
             .ok_or_else(|| eyre!("Failed to retreive application directory"))
     }
 }

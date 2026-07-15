@@ -38,7 +38,13 @@ pub async fn get_configured_dbs() -> eyre::Result<Vec<ProjectDb>> {
         project_dbs.push(project_db);
     }
 
-    let project_dbs = project_dbs.into_iter().unique().collect();
+    let project_dbs = project_dbs
+        .into_iter()
+        .unique_by(|db| db.db_database.to_string())
+        // .filter(|db| db.db_database != "operations") // FIXME: Remove operations database
+        // .filter(|db| db.db_database != "rates") // FIXME: Remove rates database
+        // .filter(|db| db.db_database != "foundation") // FIXME: Remove foundation database
+        .collect();
 
     Ok(project_dbs)
 }

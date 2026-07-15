@@ -1,8 +1,12 @@
 use eyre::{eyre, WrapErr};
 use std::{
-    fs::{create_dir_all, DirEntry, File, OpenOptions},
+    fs::{self, create_dir_all, DirEntry, File, OpenOptions},
     io::{BufReader, BufWriter, Read, Write},
     path::Path,
+};
+use zip::{
+    write::{FileOptionExtension, FileOptions},
+    ZipWriter,
 };
 
 fn is_hidden(entry: &DirEntry) -> bool {
@@ -14,17 +18,31 @@ fn is_hidden(entry: &DirEntry) -> bool {
 }
 
 pub async fn zip_dir(zip_file: BufWriter<File>, dir: &Path) -> eyre::Result<BufWriter<File>> {
-    let mut zip = zip::ZipWriter::new(zip_file);
-    let options =
-        zip::write::FileOptions::<()>::default().compression_method(zip::CompressionMethod::Stored);
-
-    let read_dir = std::fs::read_dir(dir)
-        .map_err(|e| eyre!(e))
-        .wrap_err("Failed to read directory")?;
-
+    let mut zip = ZipWriter::new(zip_file);
+    let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored);
     let mut buffer = Vec::new();
 
-    for entry in read_dir {
+    zip_dir_recursive(&mut zip, dir, dir, &options, &mut buffer)?;
+
+    let zip_file = zip
+        .finish()
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to finish zip file")?;
+
+    Ok(zip_file)
+}
+
+fn zip_dir_recursive(
+    zip: &mut ZipWriter<BufWriter<File>>,
+    base_dir: &Path,
+    current_dir: &Path,
+    options: &FileOptions<()>,
+    buffer: &mut Vec<u8>,
+) -> eyre::Result<()> {
+    for entry in fs::read_dir(current_dir)
+        .map_err(|e| eyre!(e))
+        .wrap_err_with(|| format!("Failed to read directory: {}", current_dir.display()))?
+    {
         let entry = entry
             .map_err(|e| eyre!(e))
             .wrap_err("Failed to read directory entry")?;
@@ -34,39 +52,33 @@ pub async fn zip_dir(zip_file: BufWriter<File>, dir: &Path) -> eyre::Result<BufW
         }
 
         let path = entry.path();
-        if !path.is_file() {
-            continue;
+        let relative_path = path.strip_prefix(base_dir).unwrap();
+
+        if path.is_dir() {
+            let dir_name = format!("{}/", relative_path.to_string_lossy());
+            zip.add_directory(&dir_name, *options)
+                .map_err(|e| eyre!(e))
+                .wrap_err_with(|| format!("Failed to add directory: {}", dir_name))?;
+            zip_dir_recursive(zip, base_dir, &path, options, buffer)?;
+        } else if path.is_file() {
+            let name = relative_path.to_string_lossy();
+
+            zip.start_file(name.as_ref(), *options)
+                .map_err(|e| eyre!(e))
+                .wrap_err_with(|| format!("Failed to start zip file: {}", name))?;
+
+            let file = File::open(&path)
+                .map_err(|e| eyre!(e))
+                .wrap_err_with(|| format!("Failed to open file: {}", path.display()))?;
+
+            let mut reader = BufReader::new(file);
+            reader.read_to_end(buffer)?;
+            zip.write_all(buffer)?;
+            buffer.clear();
         }
-
-        let Some(name) = path.file_name() else {
-            continue;
-        };
-
-        let Some(name) = name.to_str() else {
-            tracing::warn!("Failed to convert file name to string: {:?}", name);
-            continue;
-        };
-
-        zip.start_file(name, options)
-            .map_err(|e| eyre!(e))
-            .wrap_err_with(|| format!("Failed to start zip file: {:?}", name))?;
-
-        let file = File::open(&path)
-            .map_err(|e| eyre!(e))
-            .wrap_err_with(|| format!("Failed to open file for reading: {}", path.display()))?;
-
-        let mut file = BufReader::new(file);
-        file.read_to_end(&mut buffer)?;
-        zip.write_all(&buffer)?;
-        buffer.clear();
     }
 
-    let zip_file = zip
-        .finish()
-        .map_err(|e| eyre!(e))
-        .wrap_err("Failed to finish zip file")?;
-
-    Ok(zip_file)
+    Ok(())
 }
 
 pub async fn unzip_dir(zip_file: BufReader<File>, dir: &Path) -> eyre::Result<()> {

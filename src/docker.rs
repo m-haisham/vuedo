@@ -58,6 +58,7 @@ pub async fn mysql_dump(
     let mut cmd = tokio::process::Command::new("docker-compose");
     cmd.args(["-f", compose_file]);
     cmd.args(["exec", "hbt-service-mysql", "mysqldump"]);
+    cmd.args(["--skip-lock-tables"]);
     cmd.args(["-u", "root"]);
     cmd.args([&password]);
     cmd.args([database]);
