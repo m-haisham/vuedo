@@ -1,5 +1,6 @@
 mod cli;
 mod docker;
+mod doctor;
 mod global;
 mod project;
 
@@ -26,6 +27,10 @@ pub async fn main() -> eyre::Result<()> {
         .init();
 
     match cli.command {
+        Commands::Doctor => {
+            let health = doctor::check_health().await?;
+            println!("{}", health);
+        }
         Commands::Global { command } => match command {
             GlobalCommands::Up { rest } => {
                 global::start_all_projects(&rest).await?;

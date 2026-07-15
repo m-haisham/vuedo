@@ -25,6 +25,8 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    /// Check your configuration for potential issues
+    Doctor,
     /// Run a command for all projects
     Global {
         #[command(subcommand)]
