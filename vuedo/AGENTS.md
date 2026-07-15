@@ -6,25 +6,26 @@ Guidance for AI agents and contributors working in this repository.
 
 This is a **pnpm workspace** with two parts:
 
-- **`packages/vuedf`** — `@hshm/vuedf`, an embeddable **library** (not a
+- **`packages/vuedo`** — `@hshm/vuedo`, an embeddable **library** (not a
   service) that turns Vue+Tailwind templates into PDFs: Vue SSR → asset-inlined
   HTML → Gotenberg (headless Chromium). Consumers keep their own HTTP server and
   routes; the library exposes `createPdfKit()` → `renderHtml()` / `generatePdf()`.
 - **root (`vuedo`)** — an example **consumer**: a plain Elysia backend that
-  installs `@hshm/vuedf` (via `workspace:*`) and calls it from its own route.
+  installs `@hshm/vuedo` (via `workspace:*`) and calls it from its own routes.
 
 The authoritative architecture/spec is [`docs/reference.md`](docs/reference.md).
 When in doubt, follow it.
 
-## Library Public API (`@hshm/vuedf`)
+## Library Public API (`@hshm/vuedo`)
 
 Three exports (see `docs/reference.md` §4):
 
-- **`@hshm/vuedf`** — `createPdfKit(options)` returning `{ renderHtml, generatePdf, close }`.
-- **`@hshm/vuedf/vite`** — a Vite plugin (`pdfKit({ templatesDir, outDir })`):
+- **`@hshm/vuedo`** — `createPdfKit(options)` returning `{ renderHtml, renderComposite, generatePdf, close }`.
+- **`@hshm/vuedo/vite`** — a Vite plugin (`vuedo({ templatesDir, outDir })`):
   registers the host's dev server (tier 2) and, on `vite build`, compiles every
-  template as an SSR entry and writes `pdf-manifest.json`.
-- **`pdf-kit` CLI** — `pdf-kit build --templates <dir> --out <dir>` for hosts
+  template as an SSR entry, writes `pdf-manifest.json`, and emits the inferred
+  `PdfTemplateProps` types.
+- **`vuedo` CLI** — `vuedo build --templates <dir> --out <dir>` for hosts
   with no Vite of their own (Path B); it just drives the same plugin.
 
 `vite` is an **optional peer dependency** — production (manifest path) never
@@ -42,18 +43,20 @@ imports it.
 Production takes none of this: `createPdfKit({ mode: 'production' })` reads the
 manifest and `import()`s the pre-compiled SSR module. No Vite involved.
 
-## Library Layout (`packages/vuedf/src`)
+## Library Layout (`packages/vuedo/src`)
 
 ```
 index.ts            createPdfKit() — the only required consumer import
 renderer.ts         dev render strategy (3-tier Vite selection) + closeOwnedRenderer
 dev-registry.ts     module-level slot the plugin writes and the core reads
-manifest.ts         discoverTemplates / writeManifest / loadManifest
+discover.ts         file-based layout discovery (body + paired header/footer)
+manifest.ts         writeManifest / loadManifest (entries + layouts)
 render-component.ts  shared Vue SSR (createSSRApp + renderToString)
 gotenberg.ts        Gotenberg HTTP client (returns a ReadableStream)
 html.ts             wrapHtml() document shell
-vite-plugin.ts      exported as '@hshm/vuedf/vite'
-cli.ts              exported as bin 'pdf-kit'
+types.ts            generateTypes() — emits the inferred PdfTemplateProps
+vite-plugin.ts      exported as '@hshm/vuedo/vite'
+cli.ts              exported as bin 'vuedo'
 ```
 
 ## Root Service Layout (`src`)
@@ -66,15 +69,15 @@ pdf-templates/      Vue SFCs — the PDF templates (file-based layout convention
   Pos/PosOrder.vue    nested body
   Pos/PosHeader.vue   header (auto-pairs with Pos.PosOrder via folder convention)
 assets/             static assets referenced by templates (inlined at build)
-shared-types/       types shared between Vue props and Elysia schema
-server.ts           Elysia app + native-http boot; calls createPdfKit<PdfTemplateProps>()
+server.ts           normal Elysia server (node adapter) — one typed route per template
 generated/          AUTO-GENERATED PdfTemplateProps (gitignored) — see "Type Generation"
+vuedf-env.d.ts      shim so `.vue` imports type-check
 ```
 
 ## File-Based Layout Convention
 
 There is **no** `header`/`footer` field on the request. Layout is inferred from
-the template filenames (`packages/vuedf/src/discover.ts`):
+the template filenames (`packages/vuedo/src/discover.ts`):
 
 - `X.vue` → a **body** template named `X`.
 - `XHeader.vue` / `XFooter.vue` in the **same folder** → paired with `X`.
@@ -85,31 +88,59 @@ the template filenames (`packages/vuedf/src/discover.ts`):
 - An aux file whose base matches no body is an orphan (compiled but unused).
 
 `createPdfKit().generatePdf(name, data)` resolves the layout automatically and
-renders body + the paired header/footer, **all sharing the same `data`**, sending
-`header.html` / `footer.html` to Gotenberg. `renderComposite(name, data)` returns
-the same composition as one HTML document (used by `?preview=html`). Margins are
-the only `opts` left: `generatePdf(name, data, { marginTop, marginBottom })`.
+renders body + the paired header/footer. The `data` object carries each
+section's own props, so header/footer are never forced to share the body's data:
+
+```ts
+generatePdf("Invoice", {
+  header:  { id, customerName },
+  body:    { id, customerName },
+  footer:  { id, customerName },
+  options: { marginTop: 24, marginBottom: 24 }, // Gotenberg margins
+});
+```
+
+`renderComposite(name, data)` returns the same composition as one HTML document
+(used by `?preview=html`). A template without a paired aux simply omits that
+key from `data` (and from the generated type) — see "Type Generation".
 
 ## Type Generation
 
-On every `vite build` (and via `pdf-kit types`), the library writes
-`src/generated/pdf-templates.d.ts` mapping each template name to its **inferred**
-props type:
+On every `vite build` (and via `vuedo types`), the library writes
+`src/generated/pdf-templates.d.ts` mapping each template name to the **exact**
+`generatePdf` data shape. `header`/`footer` keys are present **only** when the
+template actually has a paired aux, so the call is type-checked against exactly
+the sections that exist:
 
 ```ts
 import type { ComponentProps } from "vue-component-type-helpers";
+import type { GeneratePdfOptions } from "@hshm/vuedo";
 import Invoice from "../pdf-templates/Invoice.vue";
-export interface PdfTemplateProps {
-  "Invoice": ComponentProps<typeof Invoice>;
-  "Pos.PosOrder": ComponentProps<typeof Pos_PosOrder>;
-}
+import InvoiceFooter from "../pdf-templates/InvoiceFooter.vue";
+import InvoiceHeader from "../pdf-templates/InvoiceHeader.vue";
+import Pos_PosHeader from "../pdf-templates/Pos/PosHeader.vue";
+import Pos_PosOrder from "../pdf-templates/Pos/PosOrder.vue";
+
+export type PdfTemplateProps = {
+  "Invoice": {
+    header:  ComponentProps<typeof InvoiceHeader>;
+    body:    ComponentProps<typeof Invoice>;
+    footer:  ComponentProps<typeof InvoiceFooter>;
+    options: GeneratePdfOptions;
+  };
+  "Pos.PosOrder": {
+    header:  ComponentProps<typeof Pos_PosHeader>;
+    body:    ComponentProps<typeof Pos_PosOrder>;
+    options: GeneratePdfOptions; // no footer key — Pos.PosOrder has no footer
+  };
+};
 ```
 
 Consumers pass it to the kit for full type-checking:
 
 ```ts
-const pdfKit = createPdfKit<PdfTemplateProps>({ templatesDir, gotenbergUrl });
-pdfKit.generatePdf("Invoice", { id, customerName }); // data type-checked
+const pdf = createPdfKit<PdfTemplateProps>({ templatesDir, gotenbergUrl });
+pdf.generatePdf("Invoice", { header, body, footer, options }); // fully type-checked
 ```
 
 Accurate prop inference requires type-checking with **`vue-tsc`** (the root
@@ -119,11 +150,11 @@ props via Volar. The generated file is gitignored (`src/generated/`).
 ## Commands
 
 - `pnpm install` — install all workspace deps
-- `pnpm --filter @hshm/vuedf build` — compile the library to `packages/vuedf/dist`
+- `pnpm --filter @hshm/vuedo build` — compile the library to `packages/vuedo/dist`
   (**do this first** — the root service and its Vite config import the built lib)
-- `pnpm dev` (root) — dev server on `:8080`; templates hot-compile via the
-  library's tier-3 owned Vite, **no build step**
-- `pnpm build` (root) — `vite build` with the pdfKit plugin → `dist/` +
+- `pnpm dev` (root) — dev server on `:8080` (normal Elysia `app.listen`); templates
+  hot-compile via the library's tier-3 owned Vite, **no build step**
+- `pnpm build` (root) — `vite build` with the `vuedo` plugin → `dist/` +
   `pdf-manifest.json` + `src/generated/pdf-templates.d.ts`
 - `pnpm start` (root) — `NODE_ENV=production` server, reads the manifest
 - `pnpm typecheck` (root) — `vue-tsc --noEmit` (validates generated props)
@@ -131,12 +162,16 @@ props via Volar. The generated file is gitignored (`src/generated/`).
 
 ## Conventions
 
-- Keep `src/shared-types/index.ts` in sync with the Elysia `t.Object` schema in
-  `src/server.ts` (for the request envelope). The per-template prop types are
-  inferred automatically — do **not** maintain a hand-written registry.
+- The per-template prop types are **inferred** from the SFCs — do **not** maintain
+  a hand-written registry (and there is no `shared-types/` folder). Each consumer
+  route hand-writes its own TypeBox `t.Object` schema mirroring the SFC props; the
+  generated `PdfTemplateProps` keeps the `generatePdf` call type-checked.
 - New templates: drop a `.vue` file in the consumer's `templatesDir` — that's
   it. `discoverLayouts()` finds them (and pairs headers/footers) for dev
   (`ssrLoadModule`) and build (SSR entry) automatically; no registry to maintain.
+- Each template gets **its own typed Elysia route** (e.g. `POST /invoice`), not a
+  single generic public endpoint — TypeBox validates the `{ header?, body, footer?,
+  options }` payload per template at the edge.
 - All assets inline as Base64 at build time (no runtime network fetches).
 - The library must never import `vite` at module top level (only dynamically, in
   the tier-3 fallback and the CLI) so the optional-peer-dependency guarantee
@@ -144,13 +179,13 @@ props via Volar. The generated file is gitignored (`src/generated/`).
 
 ## Testing Notes (§7)
 
-- **Library** (`packages/vuedf/test`): `discover.test.ts` (recursive pairing +
+- **Library** (`packages/vuedo/test`): `discover.test.ts` (recursive pairing +
   dotted names), `types.test.ts` (generated `PdfTemplateProps`), `dev.test.ts`
   drives `createPdfKit` in development mode against a fixture `templatesDir`
   (tier-3 ssrLoadModule, incl. `renderComposite`); `manifest.prod.test.ts` runs
   the real build (`runBuild`) then renders via the manifest in production mode.
-- **Consumer** (root `test`): `app.test.ts` hits the Elysia route with
-  `?preview=html` (no Gotenberg) and checks TypeBox validation; `pdf.e2e.test.ts`
-  builds `dist/`, renders through **real Gotenberg**, and parses the PDF with
-  `pdf-parse`. Both skip automatically when Gotenberg is unreachable — bring it
-  up with `docker compose -f deploy/docker-compose.yml up` (§6, infra only).
+- **Consumer** (root `test`): `app.test.ts` hits each typed Elysia route with
+  `?preview=html` (no Gotenberg) and checks TypeBox validation (422 on a missing
+  required section); `pdf.e2e.test.ts` builds `dist/`, renders through **real
+  Gotenberg**, and parses the PDF with `pdf-parse`. Both skip automatically when
+  Gotenberg is unreachable — bring it up with `docker compose -f deploy/docker-compose.yml up` (§6, infra only).

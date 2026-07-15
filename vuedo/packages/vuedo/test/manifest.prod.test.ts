@@ -41,7 +41,9 @@ describe("createPdfKit — production (manifest, compiled module)", () => {
       manifestPath: path.resolve(outDir, "pdf-manifest.json"),
     });
     const composite = await kit.renderComposite("Pos.PosOrder", {
-      orderId: "42",
+      body: { orderId: "42" },
+      header: {},
+      options: {},
     });
     expect(composite).toContain("POS order 42");
     expect(composite).toContain("POS HEADER");

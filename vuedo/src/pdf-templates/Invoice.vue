@@ -7,6 +7,5 @@
 </template>
 
 <script setup lang="ts">
-import type { InvoiceData } from "../shared-types";
-defineProps<InvoiceData>();
+defineProps<{ id: string; customerName: string }>();
 </script>

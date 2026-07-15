@@ -1,4 +1,4 @@
-# Infrastructure the @hshm/vuedf library talks to. There is no "orchestrator"
+# Infrastructure the @hshm/vuedo library talks to. There is no "orchestrator"
 # image here anymore — the library runs *inside* the consumer app's own
 # container (this repo's root service). Only Gotenberg, Browserless, and Redis
 # are standalone.

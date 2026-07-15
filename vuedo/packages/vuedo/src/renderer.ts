@@ -6,7 +6,7 @@ import { discoverLayouts, type Discovery } from "./discover.js";
 
 export type RenderFn = (template: string, data: unknown) => Promise<string>;
 
-// The one instance pdf-kit owns itself (tier 3). Created lazily, at most once,
+// The one instance vuedo owns itself (tier 3). Created lazily, at most once,
 // and torn down by close().
 let ownedVite: ViteDevServer | undefined;
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { pdfKit } from "./vite-plugin.js";
+import { vuedo } from "./vite-plugin.js";
 import { generateTypes } from "./types.js";
 
 // The CLI is literally the plugin driving a throwaway, internal Vite build
@@ -22,13 +22,13 @@ export async function runBuild(
 
   const configPath = path.join(
     import.meta.dirname,
-    `.vuedf-build-${process.pid}-${Date.now()}.ts`,
+    `.vuedo-build-${process.pid}-${Date.now()}.ts`,
   );
   await fs.writeFile(
     configPath,
     `import vue from '@vitejs/plugin-vue';\n` +
-      `import { pdfKit } from './vite-plugin.js';\n` +
-      `export default { plugins: [vue(), pdfKit({ templatesDir: ${JSON.stringify(
+      `import { vuedo } from './vite-plugin.js';\n` +
+      `export default { plugins: [vue(), vuedo({ templatesDir: ${JSON.stringify(
         templatesDir,
       )}, outDir: ${JSON.stringify(outDir)} })], build: { outDir: ${JSON.stringify(
         outDir,
@@ -90,7 +90,7 @@ async function main(): Promise<void> {
   }
 
   console.error(
-    "usage: pdf-kit <build|types> --templates <dir> [--out <dir>] [--types-out <file>]",
+    "usage: vuedo <build|types> --templates <dir> [--out <dir>] [--types-out <file>]",
   );
   process.exit(1);
 }

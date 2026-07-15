@@ -17,9 +17,9 @@ coverage/
 .single/
 
 # Library build: transient vite config written next to dist/cli.js
-packages/*/.vuedf-build-*.ts
+packages/*/.vuedo-build-*.ts
 
-# Generated template-props types (emitted by @hshm/vuedf on build / `pdf-kit types`)
+# Generated template-props types (emitted by @hshm/vuedo on build / `vuedo types`)
 src/generated/
 
 # Logs

@@ -1,23 +1,31 @@
 import { describe, it, expect, afterAll } from "vitest";
-import { app, pdfKit } from "../src/server";
+import { app, vuedo } from "../src/server";
 
 // Consumer tests (§7): plain requests against the app's own router. No network
-// hop to mock — pdf-kit renders in-process; ?preview=html avoids Gotenberg.
-const post = (body: unknown, qs = "") =>
+// hop to mock — vuedo renders in-process; ?preview=html avoids Gotenberg. Each
+// template is its own typed Elysia route, so TypeBox validation guards the
+// { header?, body, footer?, options } payload before it reaches generatePdf.
+const post = (path: string, body: unknown, qs = "") =>
   app.handle(
-    new Request(`http://localhost/api/v1/generate-pdf${qs}`, {
+    new Request(`http://localhost${path}${qs}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     }),
   );
 
-afterAll(() => pdfKit.close());
+afterAll(() => vuedo.close());
 
-describe("service POST /api/v1/generate-pdf", () => {
+describe("service POST /invoice", () => {
   it("composes body + paired header/footer via ?preview=html (no Gotenberg)", async () => {
     const res = await post(
-      { template: "Invoice", data: { id: "X1", customerName: "Acme Corp" } },
+      "/invoice",
+      {
+        header: { id: "X1", customerName: "Acme Corp" },
+        body: { id: "X1", customerName: "Acme Corp" },
+        footer: { id: "X1", customerName: "Acme Corp" },
+        options: {},
+      },
       "?preview=html",
     );
     const html = await res.text();
@@ -31,8 +39,29 @@ describe("service POST /api/v1/generate-pdf", () => {
     expect(html).toContain('class="vuedo-footer"');
   });
 
-  it("returns 422 on an invalid body", async () => {
-    const res = await post({ nope: true });
+  it("returns 422 when a required section is missing", async () => {
+    const res = await post("/invoice", {
+      body: { id: "X1", customerName: "Acme Corp" },
+      options: {},
+    });
     expect(res.status).toBe(422);
+  });
+});
+
+describe("service POST /pos-order", () => {
+  it("renders the nested template with its paired header", async () => {
+    const res = await post(
+      "/pos-order",
+      {
+        header: { store: "Downtown" },
+        body: { orderId: "ORD-9", total: 42 },
+        options: {},
+      },
+      "?preview=html",
+    );
+    const html = await res.text();
+    expect(html).toContain("ORD-9");
+    expect(html).toContain("Downtown");
+    expect(html).toContain('class="vuedo-header"');
   });
 });

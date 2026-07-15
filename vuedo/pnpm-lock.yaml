@@ -11,9 +11,12 @@ importers:
 
   .:
     dependencies:
-      '@hshm/vuedf':
+      '@elysiajs/node':
+        specifier: ^1.4.5
+        version: 1.4.5(elysia@1.4.29(@sinclair/typebox@0.34.52)(exact-mirror@1.2.2)(file-type@22.0.1)(openapi-types@12.1.3)(typescript@5.9.3))
+      '@hshm/vuedo':
         specifier: workspace:*
-        version: link:packages/vuedf
+        version: link:packages/vuedo
       elysia:
         specifier: ^1.0.0
         version: 1.4.29(@sinclair/typebox@0.34.52)(exact-mirror@1.2.2)(file-type@22.0.1)(openapi-types@12.1.3)(typescript@5.9.3)
@@ -49,7 +52,7 @@ importers:
         specifier: ^2.0.0
         version: 2.2.12(typescript@5.9.3)
 
-  packages/vuedf:
+  packages/vuedo:
     dependencies:
       '@vitejs/plugin-vue':
         specifier: ^5.0.0
@@ -98,6 +101,11 @@ packages:
 
   '@borewit/text-codec@0.2.2':
     resolution: {integrity: sha512-DDaRehssg1aNrH4+2hnj1B7vnUGEjU6OIlyRdkMd0aUdIUvKXrJfXsy8LVtXAy7DRvYVluWbMspsRhz2lcW0mQ==}
+
+  '@elysiajs/node@1.4.5':
+    resolution: {integrity: sha512-K58HEre7RQWZOkLcMNl2RFnuZFzmUUyxHRBSfC2XaJz4j2AjrpHKu/f26tN9LRi3nx1L0PbH22vgZ4O2Fqppbw==}
+    peerDependencies:
+      elysia: '>= 1.4.0'
 
   '@esbuild/aix-ppc64@0.21.5':
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -659,6 +667,14 @@ packages:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
     engines: {node: '>= 8'}
 
+  crossws@0.4.10:
+    resolution: {integrity: sha512-pz3oubH/dt12KjqsUB0IuXW4nwRDQ583iDsP4555Cpdqx0NoU7pGlWBcayyFI8f/l/idRpgjMEfwuOxSWJYlIA==}
+    peerDependencies:
+      srvx: '>=0.11.5'
+    peerDependenciesMeta:
+      srvx:
+        optional: true
+
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
@@ -890,6 +906,11 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
+  srvx@0.11.22:
+    resolution: {integrity: sha512-LqZxxBDMKuMAZzFzJnDCkFOrs9MZQZr0LvHiO/SuSZVdQaXD7xQ5UWTUxheJrQPve1qk9MG2B/yttUvJxw8egQ==}
+    engines: {node: '>=20.16.0'}
+    hasBin: true
+
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
 
@@ -1057,6 +1078,12 @@ snapshots:
       '@babel/helper-validator-identifier': 7.29.7
 
   '@borewit/text-codec@0.2.2': {}
+
+  '@elysiajs/node@1.4.5(elysia@1.4.29(@sinclair/typebox@0.34.52)(exact-mirror@1.2.2)(file-type@22.0.1)(openapi-types@12.1.3)(typescript@5.9.3))':
+    dependencies:
+      crossws: 0.4.10(srvx@0.11.22)
+      elysia: 1.4.29(@sinclair/typebox@0.34.52)(exact-mirror@1.2.2)(file-type@22.0.1)(openapi-types@12.1.3)(typescript@5.9.3)
+      srvx: 0.11.22
 
   '@esbuild/aix-ppc64@0.21.5':
     optional: true
@@ -1465,6 +1492,10 @@ snapshots:
       shebang-command: 2.0.0
       which: 2.0.2
 
+  crossws@0.4.10(srvx@0.11.22):
+    optionalDependencies:
+      srvx: 0.11.22
+
   csstype@3.2.3: {}
 
   de-indent@1.0.2: {}
@@ -1730,6 +1761,8 @@ snapshots:
   signal-exit@4.1.0: {}
 
   source-map-js@1.2.1: {}
+
+  srvx@0.11.22: {}
 
   stackback@0.0.2: {}
 

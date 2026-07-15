@@ -2,8 +2,8 @@
 dist/
 generated/
 
-# Transient build config written by the pdf-kit CLI (src/cli.ts)
-.vuedf-build-*.ts
+# Transient build config written by the vuedo CLI (src/cli.ts)
+.vuedo-build-*.ts
 
 # Test artifacts
 .tmp-dist/

@@ -27,36 +27,46 @@ export interface PdfKitOptions {
   css?: string;
 }
 
+/** Gotenberg page margins, sent as the `options` field of `generatePdf`. */
 export interface GeneratePdfOptions {
   marginTop?: number;
   marginBottom?: number;
 }
 
-// `Props` maps a template name to its data type. Build it from the generated
-// `PdfTemplateProps` so `generatePdf(template, data)` is type-checked:
+// `Props` maps a template name to its full data object:
+//   { header?, body, footer?, options }
+// Build it from the generated `PdfTemplateProps` (whose `header`/`footer`
+// keys are present only when the template actually has those sections) so
+// `generatePdf(name, data)` is type-checked against exactly the sections that
+// exist:
 //   createPdfKit<PdfTemplateProps>({ ... })
 export interface PdfKit<
-  Props extends Record<string, any> = Record<string, any>,
+  Props extends Record<string, { body: any; options?: any }> = Record<
+    string,
+    { body: any }
+  >,
 > {
   /** Vue SSR → wrapped, asset-inlined HTML string (body only). */
-  renderHtml<T extends keyof Props>(template: T, data: Props[T]): Promise<string>;
+  renderHtml<T extends keyof Props>(
+    template: T,
+    data: Props[T]["body"],
+  ): Promise<string>;
   /** Body + paired header/footer composed into one HTML document. */
   renderComposite<T extends keyof Props>(
     template: T,
     data: Props[T],
   ): Promise<string>;
   /** renderComposite() + Gotenberg conversion. Returns a ReadableStream of PDF bytes. */
-  generatePdf<T extends keyof Props>(
-    template: T,
-    data: Props[T],
-    opts?: GeneratePdfOptions,
-  ): Promise<ReadableStream>;
+  generatePdf<T extends keyof Props>(template: T, data: Props[T]): Promise<ReadableStream>;
   /** Closes any internally-owned Vite instance / Redis connection. */
   close(): Promise<void>;
 }
 
 export function createPdfKit<
-  Props extends Record<string, any> = Record<string, any>,
+  Props extends Record<string, { body: any; options?: any }> = Record<
+    string,
+    { body: any }
+  >,
 >(options: PdfKitOptions): PdfKit<Props> {
   const isDev =
     (options.mode ??
@@ -113,13 +123,15 @@ export function createPdfKit<
 
   async function renderComposite(template: any, data: any): Promise<string> {
     const layout = await layoutOf(template);
-    const body = await renderOne(template, data);
-    const header = layout.header
-      ? await renderOne(layout.header, data)
-      : null;
-    const footer = layout.footer
-      ? await renderOne(layout.footer, data)
-      : null;
+    const body = await renderOne(template, data.body);
+    const header =
+      layout.header && data.header !== undefined
+        ? await renderOne(layout.header, data.header)
+        : null;
+    const footer =
+      layout.footer && data.footer !== undefined
+        ? await renderOne(layout.footer, data.footer)
+        : null;
     const sections = [
       header ? `<div class="vuedo-header">${header}</div>` : "",
       `<div class="vuedo-body">${body}</div>`,
@@ -128,25 +140,23 @@ export function createPdfKit<
     return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${sections}</body></html>`;
   }
 
-  async function generatePdf(
-    template: any,
-    data: any,
-    opts?: GeneratePdfOptions,
-  ): Promise<ReadableStream> {
+  async function generatePdf(template: any, data: any): Promise<ReadableStream> {
     const layout = await layoutOf(template);
-    const body = await renderOne(template, data);
-    const header = layout.header
-      ? await renderOne(layout.header, data)
-      : undefined;
-    const footer = layout.footer
-      ? await renderOne(layout.footer, data)
-      : undefined;
+    const body = await renderOne(template, data.body);
+    const header =
+      layout.header && data.header !== undefined
+        ? await renderOne(layout.header, data.header)
+        : undefined;
+    const footer =
+      layout.footer && data.footer !== undefined
+        ? await renderOne(layout.footer, data.footer)
+        : undefined;
     return sendToGotenberg(options.gotenbergUrl, {
       body,
       header,
       footer,
-      marginTop: opts?.marginTop,
-      marginBottom: opts?.marginBottom,
+      marginTop: data.options?.marginTop,
+      marginBottom: data.options?.marginBottom,
     });
   }
 

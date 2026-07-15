@@ -7,7 +7,7 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 const templatesDir = path.resolve(dir, "fixtures/templates");
 
 // Development mode with no explicit and no shared Vite server: exercises the
-// tier-3 fallback where pdf-kit lazily owns its own middleware-mode instance
+// tier-3 fallback where vuedo lazily owns its own middleware-mode instance
 // and compiles the fixture template via ssrLoadModule — no build step.
 const kit = createPdfKit({
   templatesDir,
@@ -25,7 +25,11 @@ describe("createPdfKit — development (tier-3 owned Vite, ssrLoadModule)", () =
   });
 
   it("auto-composes the paired header via renderComposite", async () => {
-    const html = await kit.renderComposite("Card", { name: "X" });
+    const html = await kit.renderComposite("Card", {
+      body: { name: "X" },
+      header: {},
+      options: {},
+    });
     expect(html).toContain("Card X");
     expect(html).toContain("CARD HEADER");
     expect(html).toContain('class="vuedo-header"');

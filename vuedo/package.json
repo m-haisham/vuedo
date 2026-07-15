@@ -1,7 +1,7 @@
 {
   "name": "vuedo",
   "version": "1.0.0",
-  "description": "PDF generation service — a consumer of @hshm/vuedf",
+  "description": "PDF generation service — a consumer of @hshm/vuedo",
   "type": "module",
   "scripts": {
     "dev": "tsx watch --ignore \"**/*.timestamp-*.mjs\" src/server.ts",
@@ -21,7 +21,8 @@
     }
   },
   "dependencies": {
-    "@hshm/vuedf": "workspace:*",
+    "@hshm/vuedo": "workspace:*",
+    "@elysiajs/node": "^1.4.5",
     "elysia": "^1.0.0",
     "vue": "^3.4.0"
   },

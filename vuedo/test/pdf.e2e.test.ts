@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { execSync } from "node:child_process";
 import path from "node:path";
-import { createPdfKit } from "@hshm/vuedf";
+import { createPdfKit } from "@hshm/vuedo";
 import pdfParse from "pdf-parse";
 
 // §7 consumer E2E: exercise the *production* renderer path (manifest, no dev
@@ -31,7 +31,7 @@ describe.skipIf(!gotenbergAvailable)(
   "PDF generation — production kit + real Gotenberg (E2E, §7)",
   () => {
     beforeAll(() => {
-      // Real production build via the pdfKit Vite plugin → dist/ + manifest.
+      // Real production build via the vuedo Vite plugin → dist/ + manifest.
       execSync("pnpm build --logLevel error", {
         cwd: process.cwd(),
         stdio: "inherit",
@@ -47,8 +47,10 @@ describe.skipIf(!gotenbergAvailable)(
       });
 
       const stream = await kit.generatePdf("Invoice", {
-        id: "INV-HF-1",
-        customerName: "Header Footer Co",
+        header: { id: "INV-HF-1", customerName: "Header Footer Co" },
+        body: { id: "INV-HF-1", customerName: "Header Footer Co" },
+        footer: { id: "INV-HF-1", customerName: "Header Footer Co" },
+        options: {},
       });
 
       const buffer = Buffer.from(await new Response(stream).arrayBuffer());
@@ -72,9 +74,9 @@ describe.skipIf(!gotenbergAvailable)(
       });
 
       const stream = await kit.generatePdf("Pos.PosOrder", {
-        orderId: "ORD-9",
-        total: 42,
-        store: "Downtown",
+        header: { store: "Downtown" },
+        body: { orderId: "ORD-9", total: 42 },
+        options: {},
       });
 
       const buffer = Buffer.from(await new Response(stream).arrayBuffer());
