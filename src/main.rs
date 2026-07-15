@@ -16,7 +16,7 @@ use eyre::{eyre, Context};
 use git::current_branch;
 use infra::set_current_infra;
 use kebab::kebabify;
-use project::{set_current_project, ProjectCommands, HBT_PROJECTS};
+use project::{dir_name_to_project, set_current_project, Project, ProjectCommands};
 use tracing::level_filters::LevelFilter;
 
 #[tokio::main]
@@ -60,12 +60,11 @@ pub async fn main() -> eyre::Result<()> {
                 .cloned()
                 .ok_or_else(|| eyre::eyre!("No command provided"))?;
 
-            if HBT_PROJECTS.contains(&app.as_str()) {
+            if let Some(project) = dir_name_to_project(&app) {
                 let command = ProjectCommands::parse_from(args.into_iter());
-
-                project_command(app, command).await?;
+                project_command(project, command).await?;
             } else if let Some(app) = project::detect_project()? {
-                let mut project_args = vec![app.clone()];
+                let mut project_args = vec![app.name().to_string()];
                 project_args.extend(args.into_iter());
 
                 let command = ProjectCommands::parse_from(project_args.into_iter());
@@ -80,8 +79,8 @@ pub async fn main() -> eyre::Result<()> {
     Ok(())
 }
 
-async fn project_command(app: String, command: ProjectCommands) -> eyre::Result<()> {
-    set_current_project(&app).await?;
+async fn project_command(project: Project, command: ProjectCommands) -> eyre::Result<()> {
+    set_current_project(&project).await?;
 
     match command {
         ProjectCommands::Up { rest } => {
@@ -153,7 +152,7 @@ async fn project_command(app: String, command: ProjectCommands) -> eyre::Result<
 
             let dump_file = PathBuf::from(hbt_root)
                 .join("dumps")
-                .join(format!("{timestamp}_{app}_{key}.sql.gz"));
+                .join(format!("{timestamp}_{}_{key}.sql.gz", project.name()));
 
             if let Some(dump_dir) = dump_file.parent() {
                 std::fs::create_dir_all(dump_dir)
@@ -161,7 +160,7 @@ async fn project_command(app: String, command: ProjectCommands) -> eyre::Result<
                     .wrap_err("Failed to create dump directory")?;
             }
 
-            let dump = docker::mysql_dump(&app, &infra_env.mysql_db_password).await?;
+            let dump = docker::mysql_dump(project.name(), &infra_env.mysql_db_password).await?;
             tracing::info!("Dumped {} bytes", dump.len());
 
             let dump = zip::gzip(&dump).await?;
@@ -186,8 +185,14 @@ async fn project_command(app: String, command: ProjectCommands) -> eyre::Result<
             let dump = zip::gunzip(&dump).await?;
             tracing::info!("Decompressed dump to {} bytes", dump.len());
 
-            docker::mysql_restore(&app, &infra_env.mysql_db_password, dump.as_bytes()).await?;
-            tracing::info!("Restored dump to {}", app);
+            docker::mysql_restore(
+                project.name(),
+                &infra_env.mysql_db_password,
+                dump.as_bytes(),
+            )
+            .await?;
+
+            tracing::info!("Restored dump to {}", project.name());
         }
     }
 

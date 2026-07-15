@@ -4,31 +4,51 @@ use std::{
     env::set_current_dir,
     path::{Path, PathBuf},
 };
+use strum::EnumIter;
 
 use crate::kebab::Kebab;
 
-pub const HBT_PROJECTS: [&str; 11] = [
-    "traefik",
-    "infra",
-    "gateway",
-    "rates",
-    "search",
-    "operations",
-    "foundation",
-    "products",
-    "apigateway",
-    "app",
-    "nest",
-];
+#[derive(Debug, EnumIter)]
+pub enum Project {
+    Traefik,
+    Infra,
+    Gateway,
+    Rates,
+    Search,
+    Operations,
+    Foundation,
+    Products,
+    ApiGateway,
+    App,
+    Nest,
+}
 
-pub async fn set_current_project(app: &str) -> eyre::Result<()> {
-    tracing::info!("Setting current directory to {}", app);
+impl Project {
+    pub fn name(&self) -> &str {
+        match self {
+            Project::Traefik => "traefik",
+            Project::Infra => "infra",
+            Project::Gateway => "gateway",
+            Project::Rates => "rates",
+            Project::Search => "search",
+            Project::Operations => "operations",
+            Project::Foundation => "foundation",
+            Project::Products => "products",
+            Project::ApiGateway => "apigateway",
+            Project::App => "app",
+            Project::Nest => "nest",
+        }
+    }
+}
+
+pub async fn set_current_project(project: &Project) -> eyre::Result<()> {
+    tracing::info!("Setting current directory to {}", project.name());
 
     let hbt_docker_root = std::env::var("HBT_DOCKER_ROOT")
         .map_err(|e| eyre!(e))
         .wrap_err("HBT_DOCKER_ROOT not set")?;
 
-    let project_dir = Path::new(&hbt_docker_root).join(format!("hbt-{}", app));
+    let project_dir = Path::new(&hbt_docker_root).join(format!("hbt-{}", project.name()));
 
     set_current_dir(project_dir)
         .map_err(|e| eyre!(e))
@@ -37,7 +57,7 @@ pub async fn set_current_project(app: &str) -> eyre::Result<()> {
     Ok(())
 }
 
-pub fn detect_project() -> eyre::Result<Option<String>> {
+pub fn detect_project() -> eyre::Result<Option<Project>> {
     let current_dir = std::env::current_dir()
         .map_err(|e| eyre!(e))
         .wrap_err("Failed to get current directory")?;
@@ -58,7 +78,7 @@ pub fn detect_project() -> eyre::Result<Option<String>> {
         };
 
         if let Some(project) = dir_name_to_project(dir_name) {
-            return Ok(Some(project.to_string()));
+            return Ok(Some(project));
         }
 
         current_dir = dir.parent().map(|dir| dir.to_path_buf());
@@ -67,19 +87,19 @@ pub fn detect_project() -> eyre::Result<Option<String>> {
     Ok(None)
 }
 
-pub fn dir_name_to_project<'a>(name: &str) -> Option<&'static str> {
+pub fn dir_name_to_project(name: &str) -> Option<Project> {
     match name {
-        "traefik" => Some("traefik"),
-        "infra" => Some("infra"),
-        "apigateway" => Some("api"),
-        "gateway" | "gateway-app" => Some("gateway"),
-        "rates" => Some("rates"),
-        "search" => Some("search"),
-        "operations" => Some("operations"),
-        "foundation" => Some("foundation"),
-        "products" => Some("products"),
-        "app" | "hummingbird-app" => Some("app"),
-        "nest" | "nest-app" => Some("nest"),
+        "traefik" => Some(Project::Traefik),
+        "infra" => Some(Project::Infra),
+        "apigateway" => Some(Project::ApiGateway),
+        "gateway" | "gateway-app" => Some(Project::Gateway),
+        "rates" => Some(Project::Rates),
+        "search" => Some(Project::Search),
+        "operations" => Some(Project::Operations),
+        "foundation" => Some(Project::Foundation),
+        "products" => Some(Project::Products),
+        "app" | "hummingbird-app" => Some(Project::App),
+        "nest" | "nest-app" => Some(Project::Nest),
         _ => None,
     }
 }
