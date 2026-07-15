@@ -144,13 +144,27 @@ pub enum Commands {
 #[derive(Debug, Subcommand)]
 pub enum GlobalCommands {
     /// Start all projects
-    Up { rest: Vec<String> },
+    Up {
+        #[arg(allow_hyphen_values = true, hide = true)]
+        rest: Vec<String>,
+    },
     /// Stop all projects
-    Down { rest: Vec<String> },
+    Down {
+        #[arg(allow_hyphen_values = true, hide = true)]
+        rest: Vec<String>,
+    },
     /// Restart all projects
-    Restart { rest: Vec<String> },
+    Restart {
+        #[arg(allow_hyphen_values = true, hide = true)]
+        rest: Vec<String>,
+    },
     /// Run a git command for all projects
     Git {
+        #[arg(allow_hyphen_values = true, hide = true)]
+        rest: Vec<String>,
+    },
+    /// Artisan command for all projects
+    Artisan {
         #[arg(allow_hyphen_values = true, hide = true)]
         rest: Vec<String>,
     },

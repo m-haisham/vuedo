@@ -1,7 +1,6 @@
 mod docker;
 mod env;
 mod project;
-mod requirements;
 
 use docker::DockerHealth;
 use env::{EnvDirHealth, HealthEnvironment};

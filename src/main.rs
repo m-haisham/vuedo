@@ -11,6 +11,7 @@ mod git;
 mod infra;
 mod kebab;
 mod project;
+mod requirements;
 mod setup;
 mod snapshot;
 mod ui;
@@ -99,6 +100,9 @@ pub async fn main() -> eyre::Result<()> {
             }
             GlobalCommands::Git { rest } => {
                 commands::run_git_command_all_projects(context, rest).await?;
+            }
+            GlobalCommands::Artisan { rest } => {
+                commands::run_artisan_command_all_projects(context, &rest).await?;
             }
         },
         Commands::Snapshot { command } => match command {

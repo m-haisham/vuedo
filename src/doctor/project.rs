@@ -4,11 +4,10 @@ use eyre::eyre;
 
 use crate::{
     docker, git,
-    project::{read_project_env, Project},
+    project::{Project, read_project_env},
+    requirements::get_project_requirements,
     ui::{components::LabeledLine, traits::Draw},
 };
-
-use super::requirements::get_project_requirements;
 
 #[derive(Debug)]
 #[allow(dead_code)]
