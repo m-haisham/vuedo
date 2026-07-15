@@ -16,6 +16,7 @@ pub enum Project {
     Foundation,
     Products,
     ApiGateway,
+    DevEnvironment,
     App,
     Nest,
 }
@@ -32,6 +33,7 @@ impl Project {
             Project::Foundation => "foundation",
             Project::Products => "products",
             Project::ApiGateway => "apigateway",
+            Project::DevEnvironment => "dev-environment",
             Project::App => "app",
             Project::Nest => "nest",
         }
@@ -48,6 +50,7 @@ impl Project {
             Project::Foundation => Some("foundation"),
             Project::Products => Some("products"),
             Project::ApiGateway => Some("apigateway"),
+            Project::DevEnvironment => Some("hbt-docker-dev-environment"),
             Project::App => Some("hummingbird-app"),
             Project::Nest => Some("nest-app"),
         }
@@ -56,7 +59,7 @@ impl Project {
     pub fn git_url(&self) -> Option<&str> {
         match self {
             Project::Traefik => None,
-            Project::Infra => Some("git@bitbucket.org:humtravel/hbt-docker-dev-environment.git"),
+            Project::Infra => None,
             Project::Gateway => Some("git@bitbucket.org:humtravel/gateway-app.git"),
             Project::Rates => Some("git@bitbucket.org:humtravel/rates.git"),
             Project::Search => Some("git@bitbucket.org:humtravel/search.git"),
@@ -64,6 +67,9 @@ impl Project {
             Project::Foundation => Some("git@bitbucket.org:humtravel/foundation.git"),
             Project::Products => Some("git@bitbucket.org:humtravel/products.git"),
             Project::ApiGateway => Some("git@bitbucket.org:humtravel/apigateway.git"),
+            Project::DevEnvironment => {
+                Some("git@bitbucket.org:humtravel/hbt-docker-dev-environment.git")
+            }
             Project::App => Some("git@bitbucket.org:humtravel/hummingbird-app.git"),
             Project::Nest => Some("git@bitbucket.org:humtravel/nest-app.git"),
         }
@@ -85,6 +91,7 @@ impl Display for Project {
                 Project::Foundation => "Foundation",
                 Project::Products => "Products",
                 Project::ApiGateway => "ApiGateway",
+                Project::DevEnvironment => "DevEnvironment",
                 Project::App => "App",
                 Project::Nest => "Nest",
             }
