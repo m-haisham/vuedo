@@ -42,27 +42,27 @@ pub enum Commands {
         #[command(subcommand)]
         command: GlobalCommands,
     },
-    /// Run a command for traefik project
+    /// Run a command for traefik
     Traefik { args: Vec<String> },
-    /// Run a command for infra project
+    /// Run a command for infra
     Infra { args: Vec<String> },
-    /// Run a command for gateway project
+    /// Run a command for gateway
     Gateway { args: Vec<String> },
-    /// Run a command for rates project
+    /// Run a command for rates
     Rates { args: Vec<String> },
-    /// Run a command for search project
+    /// Run a command for search
     Search { args: Vec<String> },
-    /// Run a command for operations project
+    /// Run a command for operations
     Operations { args: Vec<String> },
-    /// Run a command for foundation project
+    /// Run a command for foundation
     Foundation { args: Vec<String> },
-    /// Run a command for products project
+    /// Run a command for products
     Products { args: Vec<String> },
-    /// Run a command for orders project
+    /// Run a command for api
     Api { args: Vec<String> },
-    /// Run a command for orders project
+    /// Run a command for app
     App { args: Vec<String> },
-    /// Run a command for orders project
+    /// Run a command for nest
     Nest { args: Vec<String> },
     #[command(external_subcommand)]
     Fallthrough(Vec<String>),
