@@ -5,7 +5,11 @@ import { registerDevServer } from "./dev-registry.js";
 import { discoverLayouts } from "./discover.js";
 import { writeManifest } from "./manifest.js";
 import { generateTypes } from "./types.js";
-import { inlineAssetsPlugin, inlineCssAssets } from "./inline-assets.js";
+import {
+  inlineAssetsPlugin,
+  inlineCssAssets,
+  inlineCssImports,
+} from "./inline-assets.js";
 import { compileTailwindCss } from "./tailwind.js";
 
 export interface VuedoPluginOptions {
@@ -71,7 +75,8 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
               ? tailwind.minify
               : true,
         });
-        const inlined = await inlineCssAssets(css, assetsDir);
+        let inlined = await inlineCssImports(css, assetsDir);
+        inlined = await inlineCssAssets(inlined, assetsDir, { fetchRemote: true });
         await mkdir(outDir, { recursive: true });
         await writeFile(path.resolve(outDir, "app.css"), inlined);
       }

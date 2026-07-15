@@ -9,7 +9,7 @@ import { loadManifest, type PdfManifest } from "./manifest.js";
 import { renderComponent } from "./render-component.js";
 import { sendToGotenberg } from "./gotenberg.js";
 import { wrapHtml } from "./html.js";
-import { inlineCssAssets, inlineHtmlAssets } from "./inline-assets.js";
+import { inlineCssAssets, inlineCssImports, inlineHtmlAssets } from "./inline-assets.js";
 import { compileTailwindCss } from "./tailwind.js";
 import type { Discovery } from "./discover.js";
 
@@ -77,7 +77,7 @@ export interface PdfKit<
   close(): Promise<void>;
 }
 
-export { inlineCssAssets };
+export { inlineCssAssets, inlineCssImports };
 export { compileTailwindCss } from "./tailwind.js";
 
 export function createPdfKit<
@@ -114,6 +114,15 @@ export function createPdfKit<
   let prodManifest: PdfManifest | undefined;
   let cachedCss: string | undefined;
 
+  // Makes a CSS string self-contained: inlines any `@import` web-font
+  // stylesheets and turns local/remote `url()` refs into Base64 data URIs so
+  // Gotenberg needs no network access.
+  async function inlineCss(css: string): Promise<string> {
+    let out = await inlineCssImports(css, assetsDir);
+    out = await inlineCssAssets(out, assetsDir, { fetchRemote: true });
+    return out;
+  }
+
   // Resolves the CSS injected into every wrapped document. Order of precedence:
   //   1. an explicit `css` option (inlined as-is);
   //   2. Tailwind — in production, a prebuilt `app.css` next to the manifest
@@ -123,7 +132,7 @@ export function createPdfKit<
   async function resolveCss(): Promise<string> {
     if (options.css !== undefined) {
       if (cachedCss === undefined) {
-        cachedCss = await inlineCssAssets(options.css, assetsDir);
+        cachedCss = options.css ? await inlineCss(options.css) : "";
       }
       return cachedCss;
     }
@@ -148,7 +157,7 @@ export function createPdfKit<
         minify: tailwindMinify,
       });
     }
-    const inlined = await inlineCssAssets(css, assetsDir);
+    const inlined = await inlineCss(css);
     if (!isDev) cachedCss = inlined;
     return inlined;
   }
