@@ -1,11 +1,11 @@
 use strum::IntoEnumIterator;
 
-use crate::{docker, project::Project};
+use crate::docker::{self, Container};
 
 pub async fn start_all_projects(args: &[String]) -> eyre::Result<()> {
-    let docker_projects = Project::iter().filter_map(|p| p.container());
+    let containers = Container::iter();
 
-    for container in docker_projects {
+    for container in containers {
         docker::compose_up(&container.compose_file()?, args).await?;
     }
 
@@ -13,9 +13,9 @@ pub async fn start_all_projects(args: &[String]) -> eyre::Result<()> {
 }
 
 pub async fn stop_all_projects(args: &[String]) -> eyre::Result<()> {
-    let docker_projects = Project::iter().filter_map(|p| p.container());
+    let containers = Container::iter();
 
-    for container in docker_projects {
+    for container in containers {
         docker::compose_down(&container.compose_file()?, args).await?;
     }
 

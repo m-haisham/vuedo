@@ -1,10 +1,11 @@
 use eyre::{eyre, WrapErr};
 use std::process::Stdio;
+use strum::EnumIter;
 use tokio::io::AsyncWriteExt;
 
 use crate::env::get_hbt_docker_root;
 
-#[derive(Debug)]
+#[derive(Debug, EnumIter)]
 pub enum Container {
     Traefik,
     Infra,
