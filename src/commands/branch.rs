@@ -1,11 +1,11 @@
 use console::Style;
-use eyre::{eyre, Context};
+use eyre::{Context, eyre};
 use strum::IntoEnumIterator;
 
 use crate::{
     context::AppContext,
     git,
-    project::{detect_project, Project},
+    project::{Project, detect_project},
     ui::BrushContext,
 };
 
@@ -30,7 +30,23 @@ pub async fn print_branches(context: &AppContext) -> eyre::Result<()> {
             })
             .await?;
 
+        let has_uncommitted = git::has_uncommitted_changes(&project_dir)
+            .await
+            .unwrap_or(false);
+
+        let has_unpushed = git::has_unpushed_commits(&project_dir)
+            .await
+            .unwrap_or(false);
+
         let draw = BrushContext::new_from_context(&context);
+
+        let mut status = String::new();
+        if has_uncommitted {
+            status.push_str(&draw.styles.error.apply_to('✗').to_string());
+        }
+        if has_unpushed {
+            status.push_str(&draw.styles.warning.apply_to('↑').to_string());
+        }
 
         let style = Style::new();
 
@@ -61,7 +77,16 @@ pub async fn print_branches(context: &AppContext) -> eyre::Result<()> {
             }
         };
 
-        let value = format!("{}{}", style.apply_to(branch), commit_output);
+        let value = format!(
+            "{}{}{}",
+            if !status.is_empty() {
+                format!("{} ", status)
+            } else {
+                "".to_string()
+            },
+            style.apply_to(branch),
+            commit_output
+        );
 
         draw.labeled_styled(project.name(), &value, &style)?;
     }

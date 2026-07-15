@@ -446,6 +446,33 @@ pub async fn git_changes() -> eyre::Result<Vec<GitChange>> {
     Ok(changes)
 }
 
+/// Returns true if there are any uncommitted changes in the given directory.
+pub async fn has_uncommitted_changes(dir: &std::path::Path) -> eyre::Result<bool> {
+    let output = Command::new("git")
+        .arg("status")
+        .arg("--porcelain")
+        .current_dir(dir)
+        .output()
+        .await
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to get git status")?;
+
+    Ok(!output.stdout.is_empty())
+}
+
+/// Returns true if there are any unpushed commits in the given directory.
+pub async fn has_unpushed_commits(dir: &std::path::Path) -> eyre::Result<bool> {
+    let output = Command::new("git")
+        .args(["rev-list", "@{u}..HEAD"])
+        .current_dir(dir)
+        .output()
+        .await
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to check for unpushed commits")?;
+
+    Ok(!output.stdout.is_empty())
+}
+
 #[derive(Debug)]
 pub struct GitInfo {
     pub branch: String,
