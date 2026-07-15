@@ -8,6 +8,49 @@ import { buildApp } from "./server/index";
 
 // Dev entrypoint: boots Vite in middleware mode inside the same process and
 // wires up the dev renderer + HMR preview. No build step, per §3.4 / §4.3.
+
+function listTemplates(): string[] {
+  const templatesDir = path.resolve("src/templates");
+  if (!fs.existsSync(templatesDir)) return [];
+  return fs
+    .readdirSync(templatesDir)
+    .filter((file) => file.endsWith(".vue"))
+    .map((file) => file.replace(/\.vue$/, ""))
+    .sort();
+}
+
+function renderTemplateIndex(templates: string[]): string {
+  const items = templates.length
+    ? templates
+        .map(
+          (name) =>
+            `<li><a href="/dev/preview.html?template=${encodeURIComponent(
+              name,
+            )}">${name}</a></li>`,
+        )
+        .join("")
+    : "<li><em>No templates found</em></li>";
+
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>vuedo — Templates</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 3rem; color: #111; }
+      h1 { font-size: 1.5rem; }
+      a { color: #2563eb; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      ul { line-height: 1.9; }
+    </style>
+  </head>
+  <body>
+    <h1>vuedo templates</h1>
+    <ul>${items}</ul>
+  </body>
+</html>`;
+}
+
 async function main() {
   const vite = await createViteServer({
     server: { middlewareMode: true },
@@ -23,7 +66,13 @@ async function main() {
     // Vite owns everything except the API: serves /dev/preview.html with full
     // HMR and transforms /src modules on the fly.
     if (!req.url?.startsWith("/api/")) {
-      const url = req.url ?? "/";
+      const url = (req.url ?? "/").split("?")[0];
+      if (url === "/" || url === "") {
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "text/html");
+        res.end(renderTemplateIndex(listTemplates()));
+        return;
+      }
       if (url === "/dev/preview.html") {
         const raw = fs.readFileSync(
           path.resolve("src/dev/preview.html"),
