@@ -1,6 +1,6 @@
 use std::env::set_current_dir;
 
-use color_eyre::owo_colors::OwoColorize;
+use console::{style, Style};
 use eyre::{eyre, WrapErr};
 use serde::Deserialize;
 use strum::IntoEnumIterator;
@@ -37,7 +37,7 @@ pub async fn checkout(
     let draw = DrawContext::new_from_context(&context);
     draw.write_line(&format!(
         "Checking out branch: {} (fallback to 'develop')",
-        branch.bold()
+        style(&branch).bold()
     ))?;
 
     for project in Project::iter() {
@@ -65,22 +65,30 @@ pub async fn checkout(
             None
         };
 
+        let line_style = match checkout_result {
+            Ok(applied_branch) if applied_branch == branch => Style::new().green(),
+            Ok(_) => Style::new(),
+            Err(_) => Style::new().red(),
+        };
+
         let checkout_output = match checkout_result {
-            Ok(applied_branch) if applied_branch == branch => branch.green().to_string(),
             Ok(applied_branch) => applied_branch.to_string(),
-            Err(e) => {
-                format!("{}", e.to_string().red())
-            }
+            Err(e) => e.to_string(),
         };
 
         let migrate_output = match migrate_result {
-            Some(Ok(_)) => "Migrated".green().to_string(),
-            Some(Err(e)) => format!("Migration failed: {}", e.red()),
-            None => "Migration skipped".dimmed().to_string(),
+            Some(Ok(_)) => style("Migrated").green().to_string(),
+            Some(Err(e)) => format!("Migration failed: {}", style(e.to_string()).red()),
+            None => style("Migration skipped").dim().to_string(),
         };
 
-        let value = format!("{}; {}", checkout_output, migrate_output);
-        draw.draw_labeled(project.name(), &value)?;
+        let value = format!(
+            "{}; {}",
+            line_style.apply_to(checkout_output),
+            migrate_output
+        );
+
+        draw.draw_labeled(&line_style.apply_to(project.name()).to_string(), &value)?;
     }
 
     Ok(())

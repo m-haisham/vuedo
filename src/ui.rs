@@ -61,7 +61,7 @@ impl DrawContext<'_> {
         };
 
         let label = format!("{indent}{label}");
-        let line = format!("{label:<LABEL_WIDTH$} {value}");
+        let line = format!("{label:>LABEL_WIDTH$} {value}");
 
         self.term.write_line(&line)?;
 
