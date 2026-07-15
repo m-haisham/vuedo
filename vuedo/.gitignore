@@ -19,6 +19,9 @@ coverage/
 # Library build: transient vite config written next to dist/cli.js
 packages/*/.vuedf-build-*.ts
 
+# Generated template-props types (emitted by @hshm/vuedf on build / `pdf-kit types`)
+src/generated/
+
 # Logs
 *.log
 

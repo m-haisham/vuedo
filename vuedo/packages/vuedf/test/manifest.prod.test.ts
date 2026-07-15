@@ -10,32 +10,41 @@ const templatesDir = path.resolve(dir, "fixtures/templates");
 const outDir = path.resolve(dir, "..", ".tmp-dist");
 
 // Production mode: the manifest written by the build (§4.4) is read and the
-// pre-compiled SSR module is imported directly — no ssrLoadModule, no dev Vite.
+// pre-compiled SSR modules are imported directly — no ssrLoadModule, no dev Vite.
 beforeAll(async () => {
   await runBuild(templatesDir, outDir);
 }, 60_000);
 
 afterAll(async () => {
-  await fs.rm(outDir, { recursive: true, force: true });
+  // await fs.rm(outDir, { recursive: true, force: true });
 });
 
 describe("createPdfKit — production (manifest, compiled module)", () => {
-  it("writes a pdf-manifest.json mapping template → compiled module", async () => {
+  it("writes a pdf-manifest.json with entries + paired layouts", async () => {
     const manifest = JSON.parse(
       await fs.readFile(path.resolve(outDir, "pdf-manifest.json"), "utf8"),
     );
-    expect(manifest.Hello).toBe("./Hello.js");
+    expect(manifest.entries.Hello).toBe("./Hello.js");
+    expect(manifest.entries["Pos.PosOrder"]).toBe("./Pos.PosOrder.js");
+    expect(manifest.layouts["Pos.PosOrder"]).toEqual({
+      body: "Pos.PosOrder",
+      header: "Pos.PosHeader",
+      footer: undefined,
+    });
   });
 
-  it("renders from the manifest without a dev Vite instance", async () => {
+  it("renders a body + paired header from the manifest without a dev Vite", async () => {
     const kit = createPdfKit({
       templatesDir,
       gotenbergUrl: "http://unused.local",
       mode: "production",
       manifestPath: path.resolve(outDir, "pdf-manifest.json"),
     });
-    const html = await kit.renderHtml("Hello", { name: "Prod" });
-    expect(html).toContain("Hello Prod");
+    const composite = await kit.renderComposite("Pos.PosOrder", {
+      orderId: "42",
+    });
+    expect(composite).toContain("POS order 42");
+    expect(composite).toContain("POS HEADER");
     await kit.close();
   });
 });

@@ -18,9 +18,16 @@ const kit = createPdfKit({
 afterAll(() => kit.close());
 
 describe("createPdfKit — development (tier-3 owned Vite, ssrLoadModule)", () => {
-  it("SSR-renders a fixture template with provided data", async () => {
+  it("SSR-renders a fixture body template with provided data", async () => {
     const html = await kit.renderHtml("Hello", { name: "Vuedf" });
     expect(html).toContain("Hello Vuedf");
     expect(html).toContain("<!DOCTYPE html>");
+  });
+
+  it("auto-composes the paired header via renderComposite", async () => {
+    const html = await kit.renderComposite("Card", { name: "X" });
+    expect(html).toContain("Card X");
+    expect(html).toContain("CARD HEADER");
+    expect(html).toContain('class="vuedo-header"');
   });
 });

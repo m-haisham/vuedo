@@ -18,7 +18,8 @@
   "dependencies": {
     "@vitejs/plugin-vue": "^5.0.0",
     "@vue/server-renderer": "^3.4.0",
-    "vue": "^3.4.0"
+    "vue": "^3.4.0",
+    "vue-component-type-helpers": "^3.3.7"
   },
   "peerDependencies": {
     "vite": "^5.0.0"

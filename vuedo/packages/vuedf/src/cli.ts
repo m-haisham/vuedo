@@ -2,6 +2,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { pdfKit } from "./vite-plugin.js";
+import { generateTypes } from "./types.js";
 
 // The CLI is literally the plugin driving a throwaway, internal Vite build
 // (§4.4 Path B) — for hosts with no Vite config of their own.
@@ -57,25 +58,41 @@ export async function runBuild(
   await fs.rm(configPath, { force: true });
 }
 
-function parseArgs(argv: string[]): { templates?: string; out?: string } {
-  const args: { templates?: string; out?: string } = {};
+function parseArgs(
+  argv: string[],
+): { templates?: string; out?: string; typesOut?: string } {
+  const args: { templates?: string; out?: string; typesOut?: string } = {};
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--templates") args.templates = argv[++i];
     else if (argv[i] === "--out") args.out = argv[++i];
+    else if (argv[i] === "--types-out") args.typesOut = argv[++i];
   }
   return args;
 }
 
 async function main(): Promise<void> {
   const [cmd, ...rest] = process.argv.slice(2);
-  if (cmd !== "build") {
-    console.error("usage: pdf-kit build --templates <dir> --out <dir>");
-    process.exit(1);
-  }
   const args = parseArgs(rest);
   const templates = path.resolve(args.templates ?? "./src/pdf-templates");
   const out = path.resolve(args.out ?? "./dist");
-  await runBuild(templates, out);
+
+  if (cmd === "build") {
+    await runBuild(templates, out);
+    return;
+  }
+
+  if (cmd === "types") {
+    const typesOut =
+      args.typesOut ??
+      path.resolve(process.cwd(), "src/generated/pdf-templates.d.ts");
+    await generateTypes(templates, typesOut);
+    return;
+  }
+
+  console.error(
+    "usage: pdf-kit <build|types> --templates <dir> [--out <dir>] [--types-out <file>]",
+  );
+  process.exit(1);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

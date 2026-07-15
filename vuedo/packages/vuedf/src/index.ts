@@ -5,22 +5,11 @@ import {
   closeOwnedRenderer,
   type RenderFn,
 } from "./renderer.js";
-import { loadManifest } from "./manifest.js";
+import { loadManifest, type PdfManifest } from "./manifest.js";
 import { renderComponent } from "./render-component.js";
 import { sendToGotenberg } from "./gotenberg.js";
 import { wrapHtml } from "./html.js";
-
-export interface TemplateRef {
-  template: string;
-  data: unknown;
-}
-
-export interface GeneratePdfOptions {
-  marginTop?: number;
-  marginBottom?: number;
-  header?: TemplateRef;
-  footer?: TemplateRef;
-}
+import type { Discovery } from "./discover.js";
 
 export interface PdfKitOptions {
   /** Absolute path to the folder of `.vue` templates. */
@@ -38,67 +27,119 @@ export interface PdfKitOptions {
   css?: string;
 }
 
-export interface PdfKit {
-  /** Vue SSR → wrapped, asset-inlined HTML string. No Gotenberg call. */
-  renderHtml(template: string, data: unknown): Promise<string>;
-  /** renderHtml() + Gotenberg conversion. Returns a ReadableStream of PDF bytes. */
-  generatePdf(
-    template: string,
-    data: unknown,
+export interface GeneratePdfOptions {
+  marginTop?: number;
+  marginBottom?: number;
+}
+
+// `Props` maps a template name to its data type. Build it from the generated
+// `PdfTemplateProps` so `generatePdf(template, data)` is type-checked:
+//   createPdfKit<PdfTemplateProps>({ ... })
+export interface PdfKit<
+  Props extends Record<string, any> = Record<string, any>,
+> {
+  /** Vue SSR → wrapped, asset-inlined HTML string (body only). */
+  renderHtml<T extends keyof Props>(template: T, data: Props[T]): Promise<string>;
+  /** Body + paired header/footer composed into one HTML document. */
+  renderComposite<T extends keyof Props>(
+    template: T,
+    data: Props[T],
+  ): Promise<string>;
+  /** renderComposite() + Gotenberg conversion. Returns a ReadableStream of PDF bytes. */
+  generatePdf<T extends keyof Props>(
+    template: T,
+    data: Props[T],
     opts?: GeneratePdfOptions,
   ): Promise<ReadableStream>;
   /** Closes any internally-owned Vite instance / Redis connection. */
   close(): Promise<void>;
 }
 
-export function createPdfKit(options: PdfKitOptions): PdfKit {
-  const mode =
-    options.mode ??
-    (process.env.NODE_ENV === "production" ? "production" : "development");
-  const isDev = mode === "development";
+export function createPdfKit<
+  Props extends Record<string, any> = Record<string, any>,
+>(options: PdfKitOptions): PdfKit<Props> {
+  const isDev =
+    (options.mode ??
+      (process.env.NODE_ENV === "production"
+        ? "production"
+        : "development")) === "development";
+  const manifestPath =
+    options.manifestPath ??
+    path.resolve(options.templatesDir, "..", "dist", "pdf-manifest.json");
 
-  // The chosen render strategy is resolved once and memoised. Production never
-  // touches Vite — `vite` need not even be installed in that deploy target.
-  let renderPromise: Promise<RenderFn> | undefined;
+  let devRender: RenderFn | undefined;
+  let devDiscovery: Discovery | undefined;
+  let prodManifest: PdfManifest | undefined;
 
-  function getRender(): Promise<RenderFn> {
-    if (!renderPromise) {
-      renderPromise = isDev
-        ? getDevRenderer(options.templatesDir)
-        : buildProdRenderer();
+  async function ensureDev(): Promise<void> {
+    if (!devRender) {
+      const r = await getDevRenderer(options.templatesDir);
+      devRender = r.render;
+      devDiscovery = r.discovery;
     }
-    return renderPromise;
+  }
+  async function ensureProd(): Promise<void> {
+    if (!prodManifest) prodManifest = await loadManifest(manifestPath);
   }
 
-  async function buildProdRenderer(): Promise<RenderFn> {
-    const manifestPath =
-      options.manifestPath ??
-      path.resolve(options.templatesDir, "..", "dist", "pdf-manifest.json");
-    const manifest = await loadManifest(manifestPath);
-    return async (template, data) => {
-      const modPath = manifest[template];
-      if (!modPath) throw new Error(`Unknown template: ${template}`);
-      const mod = await import(pathToFileURL(modPath).href);
-      return renderComponent(mod, data);
-    };
+  async function layoutOf(
+    name: string,
+  ): Promise<{ header?: string; footer?: string }> {
+    if (isDev) {
+      await ensureDev();
+      return devDiscovery!.layouts[name] ?? {};
+    }
+    await ensureProd();
+    return prodManifest!.layouts[name] ?? {};
   }
 
-  async function renderHtml(template: string, data: unknown): Promise<string> {
-    const render = await getRender();
-    return wrapHtml(await render(template, data), options.css);
+  // Renders a single template (by dotted name) to a wrapped HTML string. Picks
+  // the dev ssrLoadModule path or the pre-compiled prod module accordingly.
+  async function renderOne(name: string, data: unknown): Promise<string> {
+    if (isDev) {
+      await ensureDev();
+      return wrapHtml(await devRender!(name, data), options.css);
+    }
+    await ensureProd();
+    const modPath = prodManifest!.entries[name];
+    if (!modPath) throw new Error(`Unknown template: ${name}`);
+    const mod = await import(pathToFileURL(modPath).href);
+    return wrapHtml(await renderComponent(mod, data), options.css);
+  }
+
+  async function renderHtml(template: any, data: any): Promise<string> {
+    return renderOne(template, data);
+  }
+
+  async function renderComposite(template: any, data: any): Promise<string> {
+    const layout = await layoutOf(template);
+    const body = await renderOne(template, data);
+    const header = layout.header
+      ? await renderOne(layout.header, data)
+      : null;
+    const footer = layout.footer
+      ? await renderOne(layout.footer, data)
+      : null;
+    const sections = [
+      header ? `<div class="vuedo-header">${header}</div>` : "",
+      `<div class="vuedo-body">${body}</div>`,
+      footer ? `<div class="vuedo-footer">${footer}</div>` : "",
+    ].join("\n");
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${sections}</body></html>`;
   }
 
   async function generatePdf(
-    template: string,
-    data: unknown,
+    template: any,
+    data: any,
     opts?: GeneratePdfOptions,
   ): Promise<ReadableStream> {
-    const body = await renderHtml(template, data);
-    const header = opts?.header
-      ? await renderHtml(opts.header.template, opts.header.data)
+    const layout = await layoutOf(template);
+    const body = await renderOne(template, data);
+    const header = layout.header
+      ? await renderOne(layout.header, data)
       : undefined;
-    const footer = opts?.footer
-      ? await renderHtml(opts.footer.template, opts.footer.data)
+    const footer = layout.footer
+      ? await renderOne(layout.footer, data)
       : undefined;
     return sendToGotenberg(options.gotenbergUrl, {
       body,
@@ -111,6 +152,7 @@ export function createPdfKit(options: PdfKitOptions): PdfKit {
 
   return {
     renderHtml,
+    renderComposite,
     generatePdf,
     async close() {
       await closeOwnedRenderer();

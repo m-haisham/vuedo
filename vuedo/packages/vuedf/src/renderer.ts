@@ -1,6 +1,8 @@
+import path from "node:path";
 import type { ViteDevServer } from "vite";
 import { getSharedDevServer } from "./dev-registry.js";
 import { renderComponent } from "./render-component.js";
+import { discoverLayouts, type Discovery } from "./discover.js";
 
 export type RenderFn = (template: string, data: unknown) => Promise<string>;
 
@@ -20,23 +22,28 @@ async function createOwnedVite(templatesDir: string): Promise<ViteDevServer> {
   });
 }
 
-// Picks a Vite instance in priority order, every call (§4.3):
-//   1. explicit — caller passed one (tests / advanced setups)
-//   2. shared   — the host's own Vite server, via the plugin
-//   3. owned    — pdf-kit spins up its own, lazily, once
+// Dev renderer: resolves a dotted template name to its `.vue` file (recursively)
+// and compiles it on demand via ssrLoadModule. Also returns the discovered
+// layout map so the core can find the paired header/footer.
 export async function getDevRenderer(
   templatesDir: string,
-  explicitVite?: ViteDevServer,
-): Promise<RenderFn> {
+): Promise<{ render: RenderFn; discovery: Discovery }> {
+  const discovery = await discoverLayouts(templatesDir);
   const vite =
-    explicitVite ??
-    getSharedDevServer() ??
-    (ownedVite ??= await createOwnedVite(templatesDir));
+    getSharedDevServer() ?? (ownedVite ??= await createOwnedVite(templatesDir));
 
-  return async (template: string, data: unknown) => {
-    const mod = await vite.ssrLoadModule(`${templatesDir}/${template}.vue`);
+  function urlFor(name: string): string {
+    const file = discovery.entries[name];
+    if (!file) throw new Error(`Unknown template: ${name}`);
+    return "/" + path.relative(templatesDir, file).split(path.sep).join("/");
+  }
+
+  const render: RenderFn = async (template, data) => {
+    const mod = await vite.ssrLoadModule(urlFor(template));
     return renderComponent(mod, data);
   };
+
+  return { render, discovery };
 }
 
 export async function closeOwnedRenderer(): Promise<void> {

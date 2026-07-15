@@ -198,9 +198,41 @@ export function createPdfKit(options: PdfKitOptions): PdfKit {
 
 Production takes none of this — `getRender()` never touches Vite at all in that branch, and `vite` need not even be installed in the prod deploy target since it's an optional peer dependency (§4.1).
 
+### 4.3.1 File-based Layouts (header/footer by convention)
+
+A template's layout (body + optional header/footer) is inferred from filenames
+in `templatesDir` — there is no per-request `header`/`footer` field:
+
+- `X.vue` → a **body** template named `X`.
+- `XHeader.vue` / `XFooter.vue` in the **same folder** → paired with `X`.
+- Subdirectories are allowed and matched within their own folder:
+  `Pos/PosHeader.vue` pairs with `Pos/PosOrder.vue` (the aux's base is its parent
+  folder, `Pos`, which matches the longest body `Pos.PosOrder`).
+- A template name is its relative path with `/` → `.` (`Pos/PosOrder`).
+- An aux whose base matches no body is an orphan (compiled but unused).
+
+`generatePdf(name, data)` resolves the layout and renders body + paired
+header/footer, **all sharing the same `data`**, sending `header.html` /
+`footer.html` to Gotenberg. `renderComposite(name, data)` returns the same
+composition as one HTML document. `discover.ts` implements the recursive pairing.
+
+### 4.3.2 Inferred Template Types
+
+On every `vite build` (and via `pdf-kit types`) the library writes a
+`PdfTemplateProps` interface mapping each template name to its inferred props
+type, using `vue-component-type-helpers`' `ComponentProps<typeof import('./X.vue').default>`.
+Consumers pass it to the kit for type-checked calls:
+
+```ts
+const pdfKit = createPdfKit<PdfTemplateProps>({ templatesDir, gotenbergUrl });
+pdfKit.generatePdf("Invoice", { id, customerName }); // data type-checked
+```
+
+Accurate props require type-checking with `vue-tsc` (Volar), not plain `tsc`.
+
 ### 4.4 Building for Production — Plugin or CLI
 
-Two paths, same output: a `pdf-manifest.json` mapping template name → compiled SSR module path, sitting next to the compiled templates.
+Two paths, same output: a `pdf-manifest.json` mapping template name → compiled SSR module path, sitting next to the compiled templates. The manifest also records the resolved `layouts` (body/header/footer pairing) so the production renderer needs no filesystem walk.
 
 **Path A — host already has a `vite.config.ts`:**
 

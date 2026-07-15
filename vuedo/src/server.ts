@@ -2,14 +2,16 @@ import { Elysia, t } from "elysia";
 import fs from "node:fs";
 import path from "node:path";
 import { createPdfKit } from "@hshm/vuedf";
+import type { PdfTemplateProps } from "./generated/pdf-templates";
 
 // This root package is a *consumer* of @hshm/vuedf — an ordinary Elysia
 // backend that owns its own routing. The library does the Vue SSR + Gotenberg
-// work behind createPdfKit(); dev-mode live template compilation is a property
-// of the kit (§4.3 tier 3), not of this router.
+// work behind createPdfKit(); layout (body + paired header/footer) is resolved
+// by naming convention, and the generated PdfTemplateProps keeps the calls
+// type-checked.
 const templatesDir = path.resolve("src/pdf-templates");
 
-export const pdfKit = createPdfKit({
+export const pdfKit = createPdfKit<PdfTemplateProps>({
   templatesDir,
   gotenbergUrl: process.env.GOTENBERG_URL ?? "http://localhost:3000",
   manifestPath: path.resolve("dist/pdf-manifest.json"),
@@ -19,31 +21,22 @@ export const app = new Elysia().post(
   "/api/v1/generate-pdf",
   async ({ body, query, set }) => {
     try {
-      // Dev convenience: ?preview=html returns the composed SSR HTML directly
-      // instead of round-tripping through Gotenberg.
+      // Dev convenience: ?preview=html returns the composed SSR HTML (body +
+      // paired header/footer) instead of round-tripping through Gotenberg.
       if (query.preview === "html") {
-        const bodyHtml = await pdfKit.renderHtml(body.template, body.data);
-        const headerHtml = body.header
-          ? await pdfKit.renderHtml(body.header.template, body.header.data)
-          : null;
-        const footerHtml = body.footer
-          ? await pdfKit.renderHtml(body.footer.template, body.footer.data)
-          : null;
-        const sections = [
-          headerHtml ? `<div class="vuedo-header">${headerHtml}</div>` : "",
-          `<div class="vuedo-body">${bodyHtml}</div>`,
-          footerHtml ? `<div class="vuedo-footer">${footerHtml}</div>` : "",
-        ].join("\n");
-        const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${sections}</body></html>`;
-        return new Response(doc, {
+        const html = await pdfKit.renderComposite(
+          body.template as keyof PdfTemplateProps,
+          body.data,
+        );
+        return new Response(html, {
           headers: { "Content-Type": "text/html" },
         });
       }
 
-      const stream = await pdfKit.generatePdf(body.template, body.data, {
-        header: body.header,
-        footer: body.footer,
-      });
+      const stream = await pdfKit.generatePdf(
+        body.template as keyof PdfTemplateProps,
+        body.data,
+      );
       return new Response(stream, {
         headers: {
           "Content-Type": "application/pdf",
@@ -60,8 +53,6 @@ export const app = new Elysia().post(
     body: t.Object({
       template: t.String(),
       data: t.Any(),
-      header: t.Optional(t.Object({ template: t.String(), data: t.Any() })),
-      footer: t.Optional(t.Object({ template: t.String(), data: t.Any() })),
     }),
     query: t.Object({ preview: t.Optional(t.String()) }),
   },
