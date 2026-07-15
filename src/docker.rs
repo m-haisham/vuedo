@@ -25,3 +25,16 @@ pub async fn compose_down(args: &[String]) -> eyre::Result<()> {
 
     Ok(())
 }
+
+pub async fn compose_exec(args: &[&str]) -> eyre::Result<()> {
+    let mut cmd = tokio::process::Command::new("docker-compose");
+    cmd.args(&["exec"]);
+    cmd.args(args);
+
+    cmd.status()
+        .await
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to run docker-compose exec")?;
+
+    Ok(())
+}

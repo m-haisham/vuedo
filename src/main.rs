@@ -1,29 +1,44 @@
-use clap::Parser;
-use cli::Cli;
-use project::{set_project, ProjectCommands, HBT_PROJECTS};
-
 mod cli;
 mod docker;
+mod global;
 mod project;
+
+use clap::Parser;
+use cli::{Cli, Commands, GlobalCommands};
+use project::{set_project, ProjectCommands, HBT_PROJECTS};
+use tracing::level_filters::LevelFilter;
 
 #[tokio::main]
 pub async fn main() -> eyre::Result<()> {
     let cli = Cli::parse();
 
+    let level = match cli.verbose {
+        0 => LevelFilter::ERROR,
+        1 => LevelFilter::WARN,
+        2 => LevelFilter::INFO,
+        3 => LevelFilter::DEBUG,
+        _ => LevelFilter::TRACE,
+    };
+
+    tracing_subscriber::fmt()
+        .with_max_level(level)
+        .compact()
+        .init();
+
     match cli.command {
-        cli::Commands::Up { rest } => {
-            for app in HBT_PROJECTS {
-                set_project(app).await?;
-                docker::compose_up(&rest).await?;
+        Commands::Global { command } => match command {
+            GlobalCommands::Up { rest } => {
+                global::start_all_projects(&rest).await?;
             }
-        }
-        cli::Commands::Down { rest } => {
-            for app in HBT_PROJECTS {
-                set_project(app).await?;
-                docker::compose_down(&rest).await?;
+            GlobalCommands::Down { rest } => {
+                global::stop_all_projects(&rest).await?;
             }
-        }
-        cli::Commands::Project(args) => {
+            GlobalCommands::Restart { rest } => {
+                global::stop_all_projects(&rest).await?;
+                global::start_all_projects(&rest).await?;
+            }
+        },
+        Commands::Project(args) => {
             let app = args
                 .get(0)
                 .cloned()
@@ -31,6 +46,15 @@ pub async fn main() -> eyre::Result<()> {
 
             if HBT_PROJECTS.contains(&app.as_str()) {
                 let command = ProjectCommands::parse_from(args.into_iter());
+
+                println!("Running command: {:?}", command);
+
+                project_command(app, command).await?;
+            } else if let Some(app) = project::detect_project()? {
+                let mut project_args = vec![app.clone()];
+                project_args.extend(args.into_iter());
+
+                let command = ProjectCommands::parse_from(project_args.into_iter());
 
                 println!("Running command: {:?}", command);
 
@@ -53,6 +77,11 @@ async fn project_command(app: String, command: ProjectCommands) -> eyre::Result<
         }
         ProjectCommands::Down { rest } => {
             docker::compose_down(&rest).await?;
+        }
+        ProjectCommands::Artisan { rest } => {
+            let mut args = vec!["php-fpm", "php", "artisan"];
+            args.extend(rest.iter().map(|s| s.as_str()));
+            docker::compose_exec(&args).await?;
         }
     }
 
