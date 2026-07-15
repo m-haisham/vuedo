@@ -86,9 +86,6 @@ pub async fn main() -> eyre::Result<()> {
         Commands::Checkout { branch, migrate } => {
             commands::checkout(context, branch, migrate).await?
         }
-        Commands::Push => {
-            commands::push_all_projects(context).await?;
-        }
         Commands::All { command } => match command {
             GlobalCommands::Up { rest } => {
                 commands::start_all_projects(&rest).await?;

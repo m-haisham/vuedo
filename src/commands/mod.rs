@@ -4,8 +4,6 @@ mod checkout;
 mod config;
 mod db;
 mod git;
-mod pull;
-mod push;
 mod start;
 mod stop;
 
@@ -15,7 +13,5 @@ pub use checkout::checkout;
 pub use config::{get_config, print_config, set_config};
 pub use db::{dump_all_project_dbs, restore_all_project_dbs};
 pub use git::run_git_command_all_projects;
-pub use pull::pull_all_projects;
-pub use push::push_all_projects;
 pub use start::start_work;
 pub use stop::stop_work;

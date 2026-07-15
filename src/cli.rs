@@ -56,8 +56,6 @@ pub enum Commands {
         #[arg(short, long)]
         migrate: bool,
     },
-    /// Push all projects to the remote repository
-    Push,
     /// Run a command for all projects
     All {
         #[command(subcommand)]
