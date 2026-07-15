@@ -32,6 +32,10 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    /// Start the development environment and check for potential issues
+    Start,
+    /// Stop the development environment and check for potential issues
+    Stop,
     /// Check your configuration for potential issues
     Doctor,
     /// Dump mysql databases

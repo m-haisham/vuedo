@@ -1,3 +1,4 @@
+use bollard::Docker;
 use eyre::{eyre, WrapErr};
 use std::process::Stdio;
 use strum::EnumIter;
@@ -46,6 +47,12 @@ impl Container {
             .ok_or_else(|| eyre!("Failed to convert compose file path to string"))
             .map(String::from)
     }
+}
+
+pub async fn ping_docker() -> eyre::Result<()> {
+    let docker = Docker::connect_with_local_defaults()?;
+    docker.ping().await?;
+    Ok(())
 }
 
 pub async fn mysql_dump(

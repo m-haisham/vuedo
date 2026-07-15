@@ -19,6 +19,7 @@ mod utils;
 
 use clap::Parser;
 use cli::{Cli, Commands, GlobalCommands, ProjectCommands, SnapshotCommands};
+use color_eyre::config::HookBuilder;
 use commands::{get_config, print_config, set_config};
 use context::AppContext;
 use docker::Container;
@@ -38,6 +39,11 @@ pub async fn main() -> eyre::Result<()> {
         .map_err(|e| eyre!(e))
         .wrap_err("Failed to initialize app context")?;
 
+    HookBuilder::default()
+        .display_location_section(cli.verbose >= 3)
+        .display_env_section(false)
+        .install()?;
+
     let level = match cli.verbose {
         0 => LevelFilter::OFF,
         1 => LevelFilter::WARN,
@@ -55,6 +61,12 @@ pub async fn main() -> eyre::Result<()> {
     update::update_prompt(cli.non_interactive).await?;
 
     match cli.command {
+        Commands::Start => {
+            commands::start_work(context).await?;
+        }
+        Commands::Stop => {
+            commands::stop_work(context).await?;
+        }
         Commands::Doctor => {
             doctor::check_health(context).await?;
         }
