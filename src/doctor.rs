@@ -51,14 +51,16 @@ impl Display for HealthDocker {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "- Version: {}",
-            self.version.as_deref().unwrap_or("Not set")
+            "- {}",
+            self.version.as_deref().unwrap_or("Version: Not available")
         )?;
 
         writeln!(
             f,
-            "- Compose Version: {}",
-            self.compose_version.as_deref().unwrap_or("Not set")
+            "- {}",
+            self.compose_version
+                .as_deref()
+                .unwrap_or("Compose Version: Not available")
         )?;
 
         write!(f, "- PATH: {}", self.path.as_deref().unwrap_or("Not set"))
