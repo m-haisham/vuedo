@@ -1,6 +1,6 @@
 use eyre::{eyre, WrapErr};
 use std::{
-    fs::{DirEntry, File},
+    fs::{create_dir_all, DirEntry, File, OpenOptions},
     io::{BufReader, BufWriter, Read, Write},
     path::Path,
 };
@@ -51,16 +51,12 @@ pub async fn zip_dir(zip_file: BufWriter<File>, dir: &Path) -> eyre::Result<BufW
             .map_err(|e| eyre!(e))
             .wrap_err_with(|| format!("Failed to start zip file: {:?}", name))?;
 
-        let file = File::open(&path).map_err(|e| eyre!(e)).wrap_err_with(|| {
-            format!(
-                "Failed to open file for reading: {:?}",
-                path.file_name().unwrap()
-            )
-        })?;
+        let file = File::open(&path)
+            .map_err(|e| eyre!(e))
+            .wrap_err_with(|| format!("Failed to open file for reading: {}", path.display()))?;
 
         let mut file = BufReader::new(file);
         file.read_to_end(&mut buffer)?;
-
         zip.write_all(&buffer)?;
         buffer.clear();
     }
@@ -71,6 +67,50 @@ pub async fn zip_dir(zip_file: BufWriter<File>, dir: &Path) -> eyre::Result<BufW
         .wrap_err("Failed to finish zip file")?;
 
     Ok(zip_file)
+}
+
+pub async fn unzip_dir(zip_file: BufReader<File>, dir: &Path) -> eyre::Result<()> {
+    let mut zip = zip::ZipArchive::new(zip_file)
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to read zip file")?;
+
+    if !dir.exists() {
+        create_dir_all(dir)
+            .map_err(|e| eyre!(e))
+            .wrap_err_with(|| format!("Failed to create directory: {}", dir.display()))?;
+    }
+
+    for i in 0..zip.len() {
+        let mut zip_file = zip
+            .by_index(i)
+            .map_err(|e| eyre!(e))
+            .wrap_err_with(|| format!("Failed to read file at index: {}", i))?;
+
+        let file_name = zip_file.name();
+        let file_path = dir.join(file_name);
+
+        if zip_file.is_file() {
+            let file = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(&file_path)
+                .map_err(|e| eyre!(e))
+                .wrap_err_with(|| {
+                    format!("Failed to open file for writing: {}", file_path.display())
+                })?;
+
+            let mut file = BufWriter::new(file);
+            std::io::copy(&mut zip_file, &mut file)
+                .map_err(|e| eyre!(e))
+                .wrap_err_with(|| format!("Failed to write file: {}", file_path.display()))?;
+
+            tracing::info!("Unzipped file: {}", file_path.display());
+        } else {
+            tracing::warn!("Ignoring directory: {}", file_path.display());
+        }
+    }
+
+    Ok(())
 }
 
 pub async fn gzip(content: &str) -> eyre::Result<Vec<u8>> {

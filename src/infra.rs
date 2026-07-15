@@ -1,7 +1,8 @@
-use config::{builder::DefaultState, Environment};
 use eyre::{eyre, WrapErr};
 use serde::Deserialize;
 use std::path::PathBuf;
+
+use crate::env::read_env;
 
 #[derive(Debug, Deserialize)]
 pub struct InfraEnv {
@@ -28,28 +29,7 @@ pub async fn get_infra_env_path() -> eyre::Result<PathBuf> {
 #[tracing::instrument(skip_all)]
 pub async fn get_infra_env() -> eyre::Result<InfraEnv> {
     let infra_env_path = get_infra_env_path().await?;
-
-    let infra_env_keys = dotenvy::from_path_iter(infra_env_path)
-        .map_err(|e| eyre!(e))
-        .wrap_err("Could not read .env file")?
-        .into_iter()
-        .collect::<Result<std::collections::HashMap<String, String>, _>>()
-        .map_err(|e| eyre!(e))
-        .wrap_err("Could not parse .env file")?;
-
-    let source = Environment::default().source(Some(infra_env_keys));
-
-    let infra_env_config = config::ConfigBuilder::<DefaultState>::default()
-        .add_source(source)
-        .build()
-        .map_err(|e| eyre!(e))
-        .wrap_err("Could not build infra environment")?;
-
-    let infra_env = infra_env_config
-        .try_deserialize()
-        .map_err(|e| eyre!(e))
-        .wrap_err("Could not deserialize infra environment")?;
-
+    let infra_env = read_env(&infra_env_path).await?;
     Ok(infra_env)
 }
 

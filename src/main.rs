@@ -1,6 +1,7 @@
 mod cli;
 mod docker;
 mod doctor;
+mod env;
 mod git;
 mod global;
 mod infra;
