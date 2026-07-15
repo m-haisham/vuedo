@@ -8,6 +8,7 @@ use eyre::{eyre, WrapErr};
 
 use crate::{
     compress, context::AppContext, db, env::get_hbt_root, infra::set_current_infra, kebab::Kebab,
+    project::ProjectEnv,
 };
 
 #[tracing::instrument(
@@ -147,7 +148,12 @@ pub async fn restore_all_project_dbs(context: AppContext, key: Kebab) -> eyre::R
             }
         }
 
-        db::restore(&project_db, &dump_file).await?;
+        let project_env = ProjectEnv {
+            db_database: project_db.db_database,
+            db_password: project_db.db_password,
+        };
+
+        db::restore(&project_db.project, &project_env, &dump_file).await?;
     }
 
     Ok(())

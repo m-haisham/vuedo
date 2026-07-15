@@ -1,11 +1,12 @@
 use eyre::{eyre, WrapErr};
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::fmt::Display;
 use strum::EnumIter;
 
 use crate::{docker::Container, env::get_hbt_root};
 
-#[derive(Debug, Hash, Copy, Clone, EnumIter, PartialEq, Eq)]
+#[derive(Debug, Hash, Copy, Clone, Serialize, Deserialize, EnumIter, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
 pub enum Project {
     Gateway,
     Rates,
@@ -153,7 +154,7 @@ pub struct ProjectEnv {
 }
 
 #[tracing::instrument]
-pub async fn read_project_env<T>(project: &Project) -> eyre::Result<Option<T>>
+pub fn read_project_env<T>(project: &Project) -> eyre::Result<Option<T>>
 where
     T: DeserializeOwned,
 {
@@ -166,7 +167,7 @@ where
         return Ok(None);
     }
 
-    let env = crate::env::read_env(&env_path).await?;
+    let env = crate::env::read_env(&env_path)?;
 
     Ok(Some(env))
 }

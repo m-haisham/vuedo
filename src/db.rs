@@ -23,7 +23,7 @@ pub async fn get_configured_dbs() -> eyre::Result<Vec<ProjectDb>> {
     let mut project_dbs = vec![];
 
     for project in Project::iter() {
-        let project_env = read_project_env::<ProjectEnv>(&project).await?;
+        let project_env = read_project_env::<ProjectEnv>(&project)?;
         let Some(project_env) = project_env else {
             tracing::warn!("No environment found for {}", project.name());
             continue;
@@ -89,8 +89,12 @@ pub async fn dump_project(db: &ProjectDb, dump_dir: &Path) -> eyre::Result<(Stri
     Ok((dump_name, dump_file))
 }
 
-pub async fn restore(db: &ProjectDb, dump_path: &Path) -> eyre::Result<()> {
-    tracing::info!("Restoring dump for {}", db.project.name());
+pub async fn restore(
+    project: &Project,
+    envfile: &ProjectEnv,
+    dump_path: &Path,
+) -> eyre::Result<()> {
+    tracing::info!("Restoring database for {}", project.name());
 
     let dump = std::fs::read(dump_path)
         .map_err(|e| eyre!(e))
@@ -105,13 +109,11 @@ pub async fn restore(db: &ProjectDb, dump_path: &Path) -> eyre::Result<()> {
 
     docker::mysql_restore(
         &compose_file,
-        &db.db_database,
-        &db.db_password,
+        &envfile.db_database,
+        &envfile.db_password,
         dump.as_bytes(),
     )
     .await?;
-
-    tracing::info!("Restored dump to {}", db.project.name());
 
     Ok(())
 }

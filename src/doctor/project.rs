@@ -59,10 +59,7 @@ pub async fn check_project_health(project: Project, dir: &Path) -> eyre::Result<
         db_password: Option<String>,
     }
 
-    let env = read_project_env::<ProjectEnv>(&project)
-        .await
-        .ok()
-        .flatten();
+    let env = read_project_env::<ProjectEnv>(&project).ok().flatten();
 
     let db_connect = if let Some((Some(database), Some(password))) = env
         .as_ref()

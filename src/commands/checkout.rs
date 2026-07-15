@@ -103,7 +103,6 @@ async fn migrate_project_db(project: &Project, container: &Container) -> eyre::R
     }
 
     let project_env = read_project_env::<Env>(project)
-        .await
         .map_err(|e| eyre!(e))
         .wrap_err("Failed to read project environment")?;
 

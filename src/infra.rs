@@ -24,7 +24,7 @@ pub async fn get_infra_env_path() -> eyre::Result<PathBuf> {
 #[tracing::instrument(skip_all)]
 pub async fn get_infra_env() -> eyre::Result<InfraEnv> {
     let infra_env_path = get_infra_env_path().await?;
-    let infra_env = read_env(&infra_env_path).await?;
+    let infra_env = read_env(&infra_env_path)?;
     Ok(infra_env)
 }
 

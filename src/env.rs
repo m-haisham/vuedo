@@ -4,7 +4,7 @@ use serde::de::DeserializeOwned;
 use std::path::{Path, PathBuf};
 
 #[tracing::instrument(skip_all)]
-pub async fn read_env<T>(path: &Path) -> eyre::Result<T>
+pub fn read_env<T>(path: &Path) -> eyre::Result<T>
 where
     T: DeserializeOwned,
 {

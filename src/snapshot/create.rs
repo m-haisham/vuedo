@@ -111,6 +111,7 @@ pub async fn store_database_dumps(temp_dir: &TempDir) -> eyre::Result<Vec<MysqlD
         let hash = hash_as_hex(&mut reader)?;
 
         let dump = MysqlDump {
+            project: project_db.project,
             file: SnapshotFile {
                 name: dump_name,
                 path: dump_path_relative.to_path_buf(),

@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::project::Project;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SnapshotManifest {
     pub mysql_dumps: Vec<MysqlDump>,
@@ -12,6 +14,7 @@ pub struct SnapshotManifest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MysqlDump {
     pub file: SnapshotFile,
+    pub project: Project,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
