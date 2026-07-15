@@ -7,7 +7,6 @@ mod docker;
 mod doctor;
 mod env;
 mod git;
-mod global;
 mod infra;
 mod kebab;
 mod project;
@@ -188,14 +187,14 @@ pub async fn main() -> eyre::Result<()> {
         Commands::Checkout { branch, migrate } => commands::checkout(branch, migrate).await?,
         Commands::All { command } => match command {
             GlobalCommands::Up { rest } => {
-                global::start_all_projects(&rest).await?;
+                commands::start_all_projects(&rest).await?;
             }
             GlobalCommands::Down { rest } => {
-                global::stop_all_projects(&rest).await?;
+                commands::stop_all_projects(&rest).await?;
             }
             GlobalCommands::Restart { rest } => {
-                global::stop_all_projects(&rest).await?;
-                global::start_all_projects(&rest).await?;
+                commands::stop_all_projects(&rest).await?;
+                commands::start_all_projects(&rest).await?;
             }
         },
         Commands::Config { key, value } => match (key, value) {
