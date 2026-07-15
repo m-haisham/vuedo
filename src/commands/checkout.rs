@@ -18,6 +18,11 @@ pub async fn checkout(branch: Option<String>, migrate: bool) -> eyre::Result<()>
                 .map_err(|e| eyre!(e))
                 .wrap_err("Failed to get current branch")?;
 
+            tracing::info!(
+                "No branch specified, using current branch: {}",
+                current_branch
+            );
+
             current_branch
         }
     };
