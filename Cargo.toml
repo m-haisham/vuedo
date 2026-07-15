@@ -6,6 +6,7 @@ edition = "2021"
 repository = "https://github.com/humtravel/hbt-cli"
 
 [dependencies]
+aws-sdk-s3 = "1.69.0"
 axoupdater = "0.9.0"
 chrono = "0.4.39"
 clap = { version = "4.5.23", features = ["derive"] }

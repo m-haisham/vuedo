@@ -12,6 +12,7 @@ mod infra;
 mod kebab;
 mod project;
 mod setup;
+mod storage;
 mod update;
 mod utils;
 

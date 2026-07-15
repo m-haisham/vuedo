@@ -1,6 +1,7 @@
 use axoupdater::{AxoUpdater, AxoupdateError};
 use eyre::{eyre, Context};
 
+#[allow(unused)] // This function is not used in debug builds
 pub async fn update_prompt(non_interactive: bool) -> eyre::Result<()> {
     let mut updater = AxoUpdater::new_for(env!("CARGO_PKG_NAME"));
     if let Some(token) = option_env!("HBT_GITHUB_TOKEN") {
