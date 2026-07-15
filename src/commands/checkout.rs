@@ -42,10 +42,6 @@ pub async fn checkout(
     ))?;
 
     for project in Project::iter() {
-        let Some(container) = project.container() else {
-            continue;
-        };
-
         let project_dir = project.dir()?;
 
         set_current_dir(project_dir)
@@ -54,13 +50,17 @@ pub async fn checkout(
 
         let checkout_result = git::checkout_first(&[branch.as_str(), "develop"]).await;
 
-        let migrate_result = if migrate {
-            let migrate_result = migrate_project_db(&project, &container).await;
-            if let Err(e) = migrate_result {
-                tracing::error!("Failed to migrate database for project: {}", e);
-                continue;
+        let migrate_result = if let Some(container) = project.container() {
+            if migrate {
+                let migrate_result = migrate_project_db(&project, &container).await;
+                if let Err(e) = migrate_result {
+                    tracing::error!("Failed to migrate database for project: {}", e);
+                    continue;
+                }
+                Some(migrate_result)
+            } else {
+                None
             }
-            Some(migrate_result)
         } else {
             None
         };
