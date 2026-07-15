@@ -5,7 +5,7 @@ use serde::Deserialize;
 use strum::IntoEnumIterator;
 
 use crate::{
-    docker, git,
+    docker, env, git,
     project::{read_project_env, Project},
 };
 
@@ -28,7 +28,7 @@ pub async fn checkout(branch: Option<String>, migrate: bool) -> eyre::Result<()>
     };
 
     for project in Project::iter() {
-        let Some(project_dir) = project.dir_name() else {
+        let Some(dir_name) = project.dir_name() else {
             tracing::debug!(
                 "Skipping {} because it has no defined directory",
                 project.name()
@@ -36,6 +36,9 @@ pub async fn checkout(branch: Option<String>, migrate: bool) -> eyre::Result<()>
 
             continue;
         };
+
+        let hbt_root = env::get_hbt_root()?;
+        let project_dir = hbt_root.join(dir_name);
 
         set_current_dir(project_dir)
             .map_err(|e| eyre!(e))
