@@ -20,13 +20,14 @@ pub async fn checkout(branch_name: &str) -> eyre::Result<()> {
 }
 
 /// Checkout the first branch in the list that exists in the project repository
-pub async fn checkout_first(branches: &[&str]) -> eyre::Result<()> {
+pub async fn checkout_first<'a>(branches: &[&'a str]) -> eyre::Result<&'a str> {
     for branch in branches {
         let checkout_result = checkout(branch).await;
         match checkout_result {
-            Ok(_) => return Ok(()),
+            Ok(_) => return Ok(*branch),
             Err(e) => {
-                tracing::warn!("Failed to checkout branch: {}", e);
+                // Some of these are expected, so we only log them as debug
+                tracing::debug!("Failed to checkout branch: {}", e);
             }
         }
     }

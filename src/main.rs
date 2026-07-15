@@ -191,7 +191,9 @@ pub async fn main() -> eyre::Result<()> {
                 db::restore(&project_db, &dump_file).await?;
             }
         }
-        Commands::Checkout { branch, migrate } => commands::checkout(branch, migrate).await?,
+        Commands::Checkout { branch, migrate } => {
+            commands::checkout(context, branch, migrate).await?
+        }
         Commands::All { command } => match command {
             GlobalCommands::Up { rest } => {
                 commands::start_all_projects(&rest).await?;

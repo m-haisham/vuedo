@@ -1,15 +1,22 @@
 use std::env::set_current_dir;
 
+use color_eyre::owo_colors::OwoColorize;
 use eyre::{eyre, WrapErr};
 use serde::Deserialize;
 use strum::IntoEnumIterator;
 
 use crate::{
+    context::AppContext,
     docker, env, git,
     project::{read_project_env, set_current_project, Project},
+    ui::DrawContext,
 };
 
-pub async fn checkout(branch: Option<String>, migrate: bool) -> eyre::Result<()> {
+pub async fn checkout(
+    context: AppContext,
+    branch: Option<String>,
+    migrate: bool,
+) -> eyre::Result<()> {
     let branch = match branch {
         Some(branch) => branch,
         None => {
@@ -27,13 +34,10 @@ pub async fn checkout(branch: Option<String>, migrate: bool) -> eyre::Result<()>
         }
     };
 
+    let draw = DrawContext::new_from_context(&context);
+
     for project in Project::iter() {
         let Some(dir_name) = project.dir_name() else {
-            tracing::debug!(
-                "Skipping {} because it has no defined directory",
-                project.name()
-            );
-
             continue;
         };
 
@@ -45,18 +49,33 @@ pub async fn checkout(branch: Option<String>, migrate: bool) -> eyre::Result<()>
             .wrap_err("Failed to set current project")?;
 
         let checkout_result = git::checkout_first(&[branch.as_str(), "develop"]).await;
-        if let Err(e) = checkout_result {
-            tracing::warn!("Failed to checkout branch for project: {}", e);
-            continue;
-        }
 
-        if migrate {
+        let migrate_result = if migrate {
             let migrate_result = migrate_project_db(&project).await;
             if let Err(e) = migrate_result {
                 tracing::error!("Failed to migrate database for project: {}", e);
                 continue;
             }
-        }
+            Some(migrate_result)
+        } else {
+            None
+        };
+
+        let checkout_output = match checkout_result {
+            Ok(branch) => branch.to_string(),
+            Err(e) => {
+                format!("{}", e.to_string().red())
+            }
+        };
+
+        let migrate_output = match migrate_result {
+            Some(Ok(_)) => "Migrated".green().to_string(),
+            Some(Err(e)) => format!("Migration failed: {}", e.to_string().red()),
+            None => "Migration skipped".to_string(),
+        };
+
+        let value = format!("{}; {}", checkout_output, migrate_output);
+        draw.draw_labeled(project.name(), &value)?;
     }
 
     Ok(())
