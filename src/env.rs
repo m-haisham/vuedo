@@ -32,10 +32,52 @@ where
     Ok(env)
 }
 
-pub fn get_hbt_root() -> eyre::Result<PathBuf> {
+#[derive(Debug, thiserror::Error)]
+pub enum EnvError {
+    #[error("{key} not set: {e}")]
+    NotSet {
+        #[source]
+        e: eyre::Report,
+        key: String,
+    },
+    #[error("{key} is not a valid directory")]
+    NotDirectory { key: String },
+}
+
+pub fn get_hbt_root() -> Result<PathBuf, EnvError> {
     let hbt_root = std::env::var("HBT_ROOT")
         .map_err(|e| eyre!(e))
-        .wrap_err("HBT_ROOT not set")?;
+        .map_err(|e| EnvError::NotSet {
+            e,
+            key: "HBT_ROOT".to_string(),
+        })?;
 
-    Ok(PathBuf::from(hbt_root))
+    let hbt_root = PathBuf::from(hbt_root);
+
+    if hbt_root.exists() && hbt_root.is_dir() {
+        Ok(hbt_root)
+    } else {
+        Err(EnvError::NotDirectory {
+            key: "HBT_ROOT".to_string(),
+        })
+    }
+}
+
+pub fn get_hbt_docker_root() -> Result<PathBuf, EnvError> {
+    let hbt_docker_root = std::env::var("HBT_DOCKER_ROOT")
+        .map_err(|e| eyre!(e))
+        .map_err(|e| EnvError::NotSet {
+            e,
+            key: "HBT_DOCKER_ROOT".to_string(),
+        })?;
+
+    let hbt_docker_root = PathBuf::from(hbt_docker_root);
+
+    if hbt_docker_root.exists() && hbt_docker_root.is_dir() {
+        Ok(hbt_docker_root)
+    } else {
+        Err(EnvError::NotDirectory {
+            key: "HBT_DOCKER_ROOT".to_string(),
+        })
+    }
 }

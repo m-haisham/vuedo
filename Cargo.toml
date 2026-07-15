@@ -18,6 +18,7 @@ reqwest = "0.12.9"
 serde = { version = "1.0.216", features = ["derive"] }
 strum = { version = "0.26.3", features = ["derive"] }
 tempfile = "3.14.0"
+thiserror = "2.0.9"
 tokio = { version = "1.42.0", features = [
     "macros",
     "process",

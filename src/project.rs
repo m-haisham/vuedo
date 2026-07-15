@@ -1,9 +1,9 @@
 use eyre::{eyre, WrapErr};
 use serde::Deserialize;
-use std::{env::set_current_dir, path::Path};
+use std::env::set_current_dir;
 use strum::EnumIter;
 
-use crate::env::get_hbt_root;
+use crate::env::{get_hbt_docker_root, get_hbt_root};
 
 #[derive(Debug, Hash, Clone, EnumIter, PartialEq, Eq)]
 pub enum Project {
@@ -57,11 +57,8 @@ impl Project {
 pub async fn set_current_project(project: &Project) -> eyre::Result<()> {
     tracing::info!("Setting current directory to {}", project.name());
 
-    let hbt_docker_root = std::env::var("HBT_DOCKER_ROOT")
-        .map_err(|e| eyre!(e))
-        .wrap_err("HBT_DOCKER_ROOT not set")?;
-
-    let project_dir = Path::new(&hbt_docker_root).join(format!("hbt-{}", project.name()));
+    let hbt_docker_root = get_hbt_docker_root()?;
+    let project_dir = hbt_docker_root.join(format!("hbt-{}", project.name()));
 
     set_current_dir(project_dir)
         .map_err(|e| eyre!(e))

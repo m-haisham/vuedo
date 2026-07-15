@@ -2,7 +2,7 @@ use eyre::{eyre, WrapErr};
 use serde::Deserialize;
 use std::path::PathBuf;
 
-use crate::env::read_env;
+use crate::env::{get_hbt_docker_root, read_env};
 
 #[derive(Debug, Deserialize)]
 pub struct InfraEnv {
@@ -11,13 +11,8 @@ pub struct InfraEnv {
 
 #[tracing::instrument(skip_all)]
 pub async fn get_infra_env_path() -> eyre::Result<PathBuf> {
-    let hbt_docker_path = std::env::var("HBT_DOCKER_ROOT")
-        .map_err(|e| eyre!(e))
-        .wrap_err("HBT_DOCKER_ROOT not set")?;
-
-    let infra_env_path = PathBuf::from(hbt_docker_path)
-        .join("hbt-infra")
-        .join(".env");
+    let hbt_docker_path = get_hbt_docker_root()?;
+    let infra_env_path = hbt_docker_path.join("hbt-infra").join(".env");
 
     if infra_env_path.exists() && infra_env_path.is_file() {
         Ok(infra_env_path)
@@ -36,11 +31,8 @@ pub async fn get_infra_env() -> eyre::Result<InfraEnv> {
 pub fn set_current_infra() -> eyre::Result<()> {
     tracing::info!("Setting current directory to hbt-infra");
 
-    let hbt_docker_root = std::env::var("HBT_DOCKER_ROOT")
-        .map_err(|e| eyre!(e))
-        .wrap_err("HBT_DOCKER_ROOT not set")?;
-
-    let infra_dir = PathBuf::from(hbt_docker_root).join("hbt-infra");
+    let hbt_docker_root = get_hbt_docker_root()?;
+    let infra_dir = hbt_docker_root.join("hbt-infra");
 
     std::env::set_current_dir(infra_dir)
         .map_err(|e| eyre!(e))
