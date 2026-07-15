@@ -1,0 +1,25 @@
+[package]
+name = "hbt"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.23", features = ["derive"] }
+color-eyre = "0.6.3"
+eyre = "0.6.12"
+reqwest = "0.12.9"
+strum = { version = "0.26.3", features = ["derive"] }
+tokio = { version = "1.42.0", features = [
+    "macros",
+    "process",
+    "rt-multi-thread",
+] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
+
+[profile.release]
+codegen-units = 1
+debug-assertions = false
+debug = false
+opt-level = "z"
+lto = true
