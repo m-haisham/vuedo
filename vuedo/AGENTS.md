@@ -60,25 +60,40 @@ docker-compose.yml / docker-compose.dev.yml
 ## Commands
 
 - `pnpm install` — install deps
-- `pnpm dev` — zero-build dev server on `:8080` (+ HMR preview)
-- `pnpm build` — `vite build --ssr` + client build into `dist/`
-- `pnpm start` — run production server
+- `pnpm dev` — zero-build dev server on `:8080` (+ HMR preview, `/` lists templates)
+- `pnpm build` — `vite build --ssr src/entry-server.ts` → `dist/entry-server.js`
+- `pnpm start` — run production server (uses the built `dist/` bundle)
 - `pnpm test` — Vitest (run against prod renderer path where possible, §7)
+
+## Header / Footer
+
+The `POST /api/v1/generate-pdf` body accepts optional `header` and `footer`,
+each shaped like `{ template: string, data: unknown }`. They are rendered
+through the same `render` pipeline as the body and sent to Gotenberg as
+`header.html` / `footer.html` form parts (only when present). `?preview=html`
+composes them inline for dev sanity checks. Example templates:
+`InvoiceHeader.vue`, `InvoiceFooter.vue`.
 
 ## Conventions
 
 - Keep `src/shared-types/index.ts` in sync with the Elysia `t.Object` schemas in
   `src/server/index.ts`.
-- New templates go in `src/templates/` and must export a `render(data)` / be
-  loadable via `vite.ssrLoadModule('/src/templates/<Name>.vue')`.
+- New templates go in `src/templates/` and must be loadable via
+  `vite.ssrLoadModule('/src/templates/<Name>.vue')`. Register every template in
+  the `registry` in `src/entry-server.ts` so it bundles into `dist/`.
 - All assets must inline as Base64 at build time (no runtime network fetches).
 - Don't add logic that diverges between dev and prod inside `buildApp`; vary only
   the injected `render` function.
 
 ## Testing Notes (§7)
 
-- E2E tests target the **production** renderer path (`render.prod.ts` + real
-  `dist/`) to catch bundling-only issues (asset inlining, CSS purge).
+- E2E tests target the **production** renderer path (`render.prod.ts` + a real
+  `dist/` build produced with `vite build --ssr`). They drive the Elysia
+  endpoint and parse the returned PDF with `pdf-parse` to assert on text content
+  and page count. A local mock Gotenberg (tiny HTTP server) returns a valid PDF
+  so the suite runs without Docker; set `GOTENBERG_URL` to a real Gotenberg to
+  exercise actual Chromium. See `test/pdf.e2e.test.ts`.
 - A lighter suite runs `render.dev.ts` directly via `ssrLoadModule` for fast
-  template-author feedback without Gotenberg.
-- Parse PDF output with `pdf-parse` to assert on text content / page count.
+  template-author feedback without Gotenberg (`test/render.dev.test.ts`).
+- `test/app.test.ts` covers `buildApp` routing, header/footer composition, and
+  TypeBox validation without needing a PDF engine.

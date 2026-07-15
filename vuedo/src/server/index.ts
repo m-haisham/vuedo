@@ -27,12 +27,25 @@ export function buildApp({ render }: { render: RenderFn }) {
       try {
         const rawVueHtml = await render(body.template, body.data);
         const bodyHtml = wrapHtml(rawVueHtml);
-        const headerHtml = wrapHtml(`<div id="dynamic-header">...</div>`);
+
+        // Optional header/footer, each rendered from its own template + data.
+        const headerHtml = body.header
+          ? wrapHtml(await render(body.header.template, body.header.data))
+          : null;
+        const footerHtml = body.footer
+          ? wrapHtml(await render(body.footer.template, body.footer.data))
+          : null;
 
         // Dev convenience: ?preview=html returns the composed HTML directly
         // instead of round-tripping through Gotenberg, for quick sanity checks.
         if (query.preview === "html") {
-          return new Response(bodyHtml, {
+          const sections = [
+            headerHtml ? `<div class="vuedo-header">${headerHtml}</div>` : "",
+            `<div class="vuedo-body">${bodyHtml}</div>`,
+            footerHtml ? `<div class="vuedo-footer">${footerHtml}</div>` : "",
+          ].join("\n");
+          const doc = `<!DOCTYPE html><html><head><style>${compiledCss}</style></head><body>${sections}</body></html>`;
+          return new Response(doc, {
             headers: { "Content-Type": "text/html" },
           });
         }
@@ -43,11 +56,20 @@ export function buildApp({ render }: { render: RenderFn }) {
           new Blob([bodyHtml], { type: "text/html" }),
           "index.html",
         );
-        form.append(
-          "files",
-          new Blob([headerHtml], { type: "text/html" }),
-          "header.html",
-        );
+        if (headerHtml) {
+          form.append(
+            "files",
+            new Blob([headerHtml], { type: "text/html" }),
+            "header.html",
+          );
+        }
+        if (footerHtml) {
+          form.append(
+            "files",
+            new Blob([footerHtml], { type: "text/html" }),
+            "footer.html",
+          );
+        }
         form.append("marginTop", "1");
         form.append("marginBottom", "1");
 
@@ -78,6 +100,12 @@ export function buildApp({ render }: { render: RenderFn }) {
       body: t.Object({
         template: t.String(),
         data: t.Any(),
+        header: t.Optional(
+          t.Object({ template: t.String(), data: t.Any() }),
+        ),
+        footer: t.Optional(
+          t.Object({ template: t.String(), data: t.Any() }),
+        ),
       }),
       query: t.Object({
         preview: t.Optional(t.String()),
