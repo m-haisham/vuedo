@@ -1,315 +1,320 @@
-# Architecture & Technical Specification: PDF Generation Microservice
+# Architecture & Technical Specification: `@hshm/vuedf`
 
 ## 1. Executive Summary
 
-This document outlines the architecture, design decisions, and developer workflow for the enterprise PDF Generation Microservice.
+This document specifies `@hshm/vuedf` — a library, not a service. Consumers keep their own HTTP server (Elysia, Express, Fastify, Hono, whatever) and their own routes. The package does the nitty-gritty — Vue SSR compilation of print templates, dev-mode live compilation with no build step, Gotenberg orchestration, layout-measurement caching — behind three small exports:
 
-The service transforms JSON data into pixel-perfect PDFs using modern web technologies (Vue.js, Tailwind CSS). It uses a multi-container architecture to ensure high performance, exact layout measurements, and stability under load by separating the rendering engine, the layout measurement engine, and the application orchestration.
+- **`@hshm/vuedf`** — the core: `createPdfKit()`, returns `renderHtml()` / `generatePdf()`. Framework-agnostic; the consumer calls these from inside whatever route handler they already have.
+- **`@hshm/vuedf/vite`** — an optional Vite plugin. Auto-discovers template SSR entries for production builds and, if the host app already runs a Vite dev server, lets `pdf-kit` share it instead of spinning up a second one.
+- **`pdf-kit build`** — a CLI, for hosts with no Vite of their own (a plain Node/Elysia backend), that runs the same compile step standalone.
 
-Critically, the service supports **two distinct runtime modes**:
-
-- **Production mode** — the Orchestrator loads pre-compiled, pre-bundled Vue SSR output from `dist/`. No Vite is present in the production container.
-- **Development mode** — the Orchestrator runs Vite in **middleware mode**, compiling and SSR-rendering templates on every request straight from `src/`. There is no `vite build` step in the loop. Editing a `.vue` template and hitting the endpoint again reflects the change immediately (transform + module graph invalidation, no bundling).
-
-This means template authors never run a build command while iterating. `pnpm dev` is the only command needed for the entire inner loop.
+Dev-mode stays live with **no `vite build` in the loop**, same guarantee as before — the difference is that the library, not a bespoke `server.ts`, now owns the decision of *how* to get a running Vite instance, and it has three ways to do that in priority order (§4.3).
 
 ## 2. System Architecture
 
-The microservice ecosystem consists of four runtime components, plus one dev-only component:
-
-| Component                        | Tech                                      | Role                                                                                                                                                                             |
-| -------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Orchestrator**                 | Node.js / Elysia (`@elysiajs/node`), pnpm | Entry point. Validates JSON via TypeBox, renders Vue → HTML string, coordinates the browser containers.                                                                          |
-| **Renderer**                     | Gotenberg                                 | Stateless headless-Chromium container. Converts final HTML/CSS strings into a PDF binary stream.                                                                                 |
-| **Measurement Engine**           | Browserless                               | Secondary headless Chrome container used exclusively for pre-flight DOM measurements (e.g. dynamic header/footer height, table pagination breakpoints).                          |
-| **Cache**                        | Redis                                     | Caches layout measurements keyed by HTML hash, so identical templates/data don't re-measure.                                                                                     |
-| **Vite Dev Server** _(dev only)_ | Vite, `@vue/server-renderer`              | Runs **inside the Orchestrator process** in middleware mode. Provides on-demand SSR compilation and a browser-based live-preview HMR server. Never present in production images. |
-
 ```
-                        ┌─────────────────────────────┐
-   PROD                 │  Orchestrator (Node/Elysia)  │
-   ─────►  POST JSON ──►│  loads dist/entry-server.js  │──► Gotenberg ──► PDF
-                        └─────────────────────────────┘
-                                     │
-                                     ▼
-                                  Redis (measurement cache)
-
-                        ┌───────────────────────────────────────┐
-   DEV                  │  Orchestrator (Node/Elysia)            │
-   ─────►  POST JSON ──►│  + Vite in middleware mode              │──► Gotenberg (optional) ──► PDF
-          GET /preview ─┤  vite.ssrLoadModule('/src/...') on      │
-                        │  every request — no build step          │
-                        │  + HMR dev server for browser preview   │
-                        └───────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│  Consumer's own app (Elysia / Express / Fastify / anything)    │
+│                                                                   │
+│    app.post('/invoices/:id/pdf', async (ctx) => {                │
+│      const data = await getInvoiceData(ctx.params.id);           │
+│      return pdfKit.generatePdf('Invoice', data);   ◄── one call  │
+│    })                                                             │
+└───────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+              ┌───────────────────────────────┐
+              │   @hshm/vuedf (library)    │
+              │   createPdfKit({ ... })         │
+              │   • renderHtml()  — Vue → HTML  │
+              │   • generatePdf() — + Gotenberg │
+              └───────────────────────────────┘
+                 │             │             │
+                 ▼             ▼             ▼
+          Vite (dev only,  Gotenberg    Redis (measurement
+          see §4.3)        (PDF render)  cache) + Browserless
+                                          (pre-flight measurement)
 ```
+
+The library never listens on a port and never owns routing. Gotenberg, Browserless, and Redis are the same three collaborators as before — they're just reached from inside the library's `generatePdf()` instead of from a service-specific `server.ts`.
 
 ## 3. Architectural Decisions & Justifications
 
 ### 3.1 Vue SSR + Tailwind over PDFKit/Native Libraries
 
-**Decision:** Use Vue.js and Tailwind CSS compiled to static HTML via `@vue/server-renderer`.
+Unchanged from the original spec: web technologies (flexbox, grid, reactive data binding) beat hand-computed X/Y coordinates for template authoring DX.
 
-**Justification:** Web technologies provide a superior Developer Experience (DX), allowing frontend engineers to author templates using standard flexbox, grids, and reactive data binding without calculating X/Y coordinates.
+### 3.2 Library, Not a Service
 
-### 3.2 Elysia + Node.js (via pnpm)
+**Decision:** Ship `@hshm/vuedf` as an npm package the consumer installs into their own backend, rather than a standalone microservice they deploy and call over HTTP.
 
-**Decision:** Use the Elysia web framework running on Node.js using the `@elysiajs/node` adapter, managed by the pnpm package manager.
+**Justification:** The previous design forced every consumer to run a second network hop (their app → the PDF service → Gotenberg) and to duplicate auth/routing concerns across two codebases. As a library, template rendering happens in-process; only the actual PDF conversion (which genuinely needs headless Chromium) leaves the process, to Gotenberg. The consumer's own router, middleware, and auth apply naturally — `pdf-kit` never has an opinion about how the route is protected or shaped.
 
-**Justification:** pnpm ensures strict dependency trees and fast CI/CD builds. Elysia provides built-in schema validation (TypeBox), ensuring the PDF service never attempts to render a document with malformed data. By using Node 20+, we leverage native `fetch` and `FormData` APIs without bulky external polyfills.
+### 3.3 A Real Vite Plugin, Not a Bundled-In Dev Server
 
-### 3.3 "Embed Everything" via Vite
+**Decision:** Move Vite integration into `@hshm/vuedf/vite`, a standard Vite plugin with `configureServer` and `config` hooks, rather than having the library spin up its own Vite instance unconditionally.
 
-**Decision:** Configure Vite to inline all assets (images, fonts, CSS) as Base64 data URIs within a single HTML string.
+**Justification:** Many consumers already run a Vite dev server for their own frontend (a Nuxt app, a separate SPA, whatever). Forcing `pdf-kit` to always boot a second,独立 Vite instance wastes memory and, worse, can produce two different module graphs for the same `.vue` files if the host also imports them elsewhere. A plugin lets the host's *existing* Vite server double as the compiler `pdf-kit` uses — `configureServer` registers that running instance so `createPdfKit()` finds it instead of creating its own. Hosts with no Vite at all still get a working dev mode: the library falls back to an internally-owned instance (§4.3), so the plugin is an optimization, not a requirement — matching "can do a Vite plugin too if necessary."
 
-**Justification:** Eliminates network latency during PDF generation. The HTML package is 100% deterministic and self-contained.
+### 3.4 "Embed Everything" via Vite (unchanged)
 
-### 3.4 Vite Middleware Mode for Development (new)
+Assets stay Base64-inlined into the SSR HTML string per the original spec — deterministic, no network fetch during Gotenberg conversion.
 
-**Decision:** In development, do not run `vite build` at all. Instead, boot Vite programmatically via `vite.createServer({ server: { middlewareMode: true } })` inside the same process as the Elysia dev server, and use `vite.ssrLoadModule()` to import template entry points on demand.
+## 4. Public API & Package Layout
 
-**Justification:**
-
-- **No build step in the loop.** `vite.ssrLoadModule` compiles + SSR-transforms only the modules touched by a given request, on the fly, with an in-memory module graph. There is nothing to "run" between edits.
-- **True hot invalidation.** Vite's module graph tracks which `.vue` files changed since the last request; only those (and their importers) are re-transformed. A full `vite build` recompiles and re-bundles everything, which is wasted work for a single-invoice edit.
-- **One process, two jobs.** The same Elysia server that serves `/api/v1/generate-pdf` also serves a `/__preview` route backed by Vite's HTML dev server, giving template authors instant browser HMR (edit `.vue` → see it re-render in the tab, no PDF round-trip needed for 90% of layout work).
-- **Prod stays clean.** `vite` is a `devDependency` only. The production Docker image never installs it; production always loads the pre-built `dist/entry-server.js`, keeping the prod container small and the SSR path fully static/deterministic (per §3.3).
-
-## 4. Developer Workflow & Monorepo Structure
-
-The project is a single repository with two build targets — Vite (frontend compiler) and Node (backend runtime) — and two run modes: `pnpm dev` (no build) and `pnpm build && pnpm start` (production).
-
-### 4.1 Directory Layout
+### 4.1 Package Layout
 
 ```
-.
+@hshm/vuedf/
 ├── src/
-│   ├── templates/           # Vue SFCs — the actual PDF templates
-│   │   └── Invoice.vue
-│   ├── assets/
-│   ├── shared-types/        # Types shared between Vue props and Elysia's TypeBox schema
-│   ├── entry-server.ts      # SSR render entry — the one file Vite's --ssr build needs
-│   ├── dev/
-│   │   ├── preview.html     # Vite HTML entry for the live-preview harness
-│   │   └── preview-main.ts  # Mounts a template client-side with sample fixture data
-│   └── server.ts            # ONE Elysia app. Branches on NODE_ENV at boot, not at the file level.
-├── vite.config.ts
-├── Dockerfile
-├── docker-compose.yml
-├── docker-compose.dev.yml
-└── package.json
+│   ├── index.ts          # createPdfKit() — the only required import for consumers
+│   ├── renderer.ts        # dev vs. prod render strategy (mirrors the old server.ts branch, §4.3)
+│   ├── dev-registry.ts     # module-level slot the Vite plugin writes into, core reads from
+│   ├── manifest.ts         # reads pdf-manifest.json written by the plugin/CLI at build time
+│   ├── gotenberg.ts        # Gotenberg HTTP client
+│   ├── vite-plugin.ts      # exported as '@hshm/vuedf/vite'
+│   └── cli.ts              # exported as bin `pdf-kit`
+├── package.json             # exports map below
 ```
-
-### 4.2 Authoring the Vue Component
-
-Create a standard Vue SFC inside `src/templates`.
-
-```vue
-<!-- src/templates/Invoice.vue -->
-<template>
-  <div class="p-10 font-sans bg-white text-gray-900">
-    <img src="../assets/logo.png" class="w-32 mb-8" />
-    <h1 class="text-4xl font-bold">Invoice #{{ id }}</h1>
-    <p>Billed to: {{ customerName }}</p>
-  </div>
-</template>
-
-<script setup lang="ts">
-// Types can be shared with the Elysia validator!
-import type { InvoiceData } from "../shared-types";
-defineProps<InvoiceData>();
-</script>
-```
-
-### 4.3 `pnpm dev` — Zero-Build Inner Loop, Same Elysia App
-
-There is exactly **one** Elysia app and **one** entrypoint file, `src/server.ts`, used for both `pnpm dev` and production. The only thing that differs between modes is which `render()` function gets closed over at boot — decided once, with an `if`, before `.listen()` is called. Routes, validation, and the Gotenberg call are the same code path in both modes; nothing is duplicated or re-implemented per-file.
 
 ```json
-// package.json (relevant scripts)
+// package.json (exports map)
 {
-  "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "vite build --ssr src/entry-server.ts --outDir dist && vite build --outDir dist/client",
-    "start": "node dist-server/server.js"
+  "name": "@hshm/vuedf",
+  "bin": { "pdf-kit": "./dist/cli.js" },
+  "exports": {
+    ".": "./dist/index.js",
+    "./vite": "./dist/vite-plugin.js"
+  },
+  "peerDependencies": {
+    "vite": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": { "optional": true }
   }
 }
 ```
 
+`vite` is an **optional peer dependency** — a consumer using only the CLI-based build (§4.4) or running entirely in production never needs it installed at all in that deploy target.
+
+### 4.2 Core API
+
 ```ts
-// src/server.ts
-import { Elysia, t } from "elysia";
-import { node } from "@elysiajs/node";
-import fs from "fs";
-import path from "path";
+// @hshm/vuedf
+export interface PdfKitOptions {
+  templatesDir: string;           // absolute path to the folder of .vue templates
+  gotenbergUrl: string;
+  redisUrl?: string;               // optional — enables layout-measurement caching
+  browserlessUrl?: string;         // optional — enables pre-flight DOM measurement
+  mode?: 'development' | 'production';   // default: derived from NODE_ENV
+  manifestPath?: string;           // default: '<templatesDir>/../dist/pdf-manifest.json'
+}
 
-const isDev = process.env.NODE_ENV !== "production";
-const compiledCss = fs.readFileSync(
-  path.resolve("./dist/assets/style.css"),
-  "utf-8",
-);
+export interface PdfKit {
+  /** Vue SSR → wrapped, asset-inlined HTML string. No Gotenberg call. */
+  renderHtml(template: string, data: unknown): Promise<string>;
 
-const wrapHtml = (content: string) => `
-  <!DOCTYPE html>
-  <html><head><style>${compiledCss}</style></head><body>${content}</body></html>
-`;
+  /** renderHtml() + Gotenberg conversion. Returns a ReadableStream of PDF bytes. */
+  generatePdf(
+    template: string,
+    data: unknown,
+    opts?: { marginTop?: number; marginBottom?: number; headerTemplate?: string }
+  ): Promise<ReadableStream>;
 
-// --- Decide the render strategy ONCE, at boot, not per-file. -------------
-// In dev, Vite runs in middleware mode: ssrLoadModule compiles + SSR-
-// transforms a .vue template on demand, using Vite's module graph for
-// invalidation. No dist/, no bundle, no separate build/watch process.
-// In prod, this branch is never evaluated — dist/entry-server.js is a
-// static import, and vite itself isn't even a dependency of the image.
-let render: (template: string, data: unknown) => Promise<string>;
-let viteMiddlewares: import("vite").Connect.Server | undefined;
+  /** Closes any internally-owned Vite instance / Redis connection. Call on shutdown. */
+  close(): Promise<void>;
+}
 
-if (isDev) {
-  const { createServer: createViteServer } = await import("vite");
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
-    appType: "custom",
-  });
-  viteMiddlewares = vite.middlewares;
-  render = async (template, data) => {
-    const mod = await vite.ssrLoadModule(`/src/templates/${template}.vue`);
+export function createPdfKit(options: PdfKitOptions): PdfKit;
+```
+
+### 4.3 Dev-Mode Rendering — Three Tiers, Same Live Guarantee
+
+`renderer.ts` picks a Vite instance in priority order, every time `renderHtml()`/`generatePdf()` is called in dev mode:
+
+```ts
+// src/renderer.ts
+import type { ViteDevServer } from 'vite';
+import { getSharedDevServer } from './dev-registry';
+
+let ownedVite: ViteDevServer | undefined;
+
+export async function getDevRenderer(templatesDir: string, explicitVite?: ViteDevServer) {
+  const vite =
+    explicitVite ??                       // 1. caller passed one explicitly (tests, advanced setups)
+    getSharedDevServer() ??                // 2. the host's own Vite server, via the plugin's configureServer hook
+    (ownedVite ??= await (await import('vite')).createServer({
+      server: { middlewareMode: true },
+      appType: 'custom',
+    }));                                   // 3. fallback — pdf-kit spins up its own, lazily, once
+
+  return async (template: string, data: unknown) => {
+    const mod = await vite.ssrLoadModule(`${templatesDir}/${template}.vue`);
     return mod.render(data);
   };
-} else {
-  const { renderPdfBody } = await import("../dist/entry-server.js");
-  render = renderPdfBody;
 }
-// ---------------------------------------------------------------------
+```
 
-const app = new Elysia().use(node()).post(
-  "/api/v1/generate-pdf",
-  async ({ body, query, set }) => {
-    try {
-      const rawVueHtml = await render(body.template, body.data);
-      const bodyHtml = wrapHtml(rawVueHtml);
-      const headerHtml = wrapHtml(`<div id="dynamic-header">...</div>`);
+```ts
+// src/dev-registry.ts — the seam the plugin and the core meet at
+import type { ViteDevServer } from 'vite';
 
-      // Dev convenience: ?preview=html skips Gotenberg, returns composed
-      // SSR HTML directly. Works identically in prod, just less useful there.
-      if (query.preview === "html") {
-        set.headers = { "Content-Type": "text/html" };
-        return bodyHtml;
-      }
+let shared: ViteDevServer | undefined;
+export function registerDevServer(server: ViteDevServer) { shared = server; }
+export function getSharedDevServer() { return shared; }
+```
 
-      const form = new FormData();
-      form.append(
-        "files",
-        new Blob([bodyHtml], { type: "text/html" }),
-        "index.html",
-      );
-      form.append(
-        "files",
-        new Blob([headerHtml], { type: "text/html" }),
-        "header.html",
-      );
-      form.append("marginTop", "1");
-      form.append("marginBottom", "1");
+Tier 2 is what makes the plugin worth having: a host that already runs `vite dev` for a Nuxt/Vue frontend gets `pdf-kit` templates hot-compiling through that *same* process — one Vite instance, one module graph, zero extra memory. Tier 3 is what makes the plugin *optional*: a plain Elysia-only backend with no Vite of its own still gets live template compilation, just via a small dedicated instance `pdf-kit` manages itself.
 
-      const gotenbergRes = await fetch(
-        process.env.GOTENBERG_URL + "/forms/chromium/convert/html",
-        {
-          method: "POST",
-          body: form,
-        },
-      );
+```ts
+// src/index.ts (excerpt)
+export function createPdfKit(options: PdfKitOptions): PdfKit {
+  const isDev = (options.mode ?? (process.env.NODE_ENV === 'production' ? 'production' : 'development')) === 'development';
 
-      if (!gotenbergRes.ok) throw new Error("Gotenberg failed to generate PDF");
-
-      set.headers = {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${body.template}.pdf"`,
+  async function getRender() {
+    if (!isDev) {
+      const manifest = await loadManifest(options.manifestPath);
+      return async (template: string, data: unknown) => {
+        const mod = await import(manifest[template]);   // pre-compiled, from §4.4
+        return mod.render(data);
       };
-      return gotenbergRes.body;
-    } catch (error) {
-      console.error(error);
-      set.status = 500;
-      return { error: "PDF Generation Failed" };
     }
-  },
-  {
-    body: t.Object({ template: t.String(), data: t.Any() }),
-    query: t.Object({ preview: t.Optional(t.String()) }),
-  },
-);
+    return getDevRenderer(options.templatesDir);
+  }
 
-// Vite's connect middleware (live-preview HMR) is only mounted in dev —
-// same app instance, one extra `.use()` when the dev branch above ran.
-if (viteMiddlewares) app.use(viteMiddlewares);
+  return {
+    async renderHtml(template, data) {
+      const render = await getRender();
+      return wrapHtml(await render(template, data));
+    },
+    async generatePdf(template, data, opts) {
+      const bodyHtml = await this.renderHtml(template, data);
+      return sendToGotenberg(options.gotenbergUrl, bodyHtml, opts);
+    },
+    async close() { /* shuts down any owned Vite instance / redis client */ },
+  };
+}
+```
 
-app.listen(8080, () => {
-  console.log(
-    `🦊 Origami PDF Service running (${isDev ? "dev, live templates" : "prod, static dist/"}) on :8080`,
-  );
+Production takes none of this — `getRender()` never touches Vite at all in that branch, and `vite` need not even be installed in the prod deploy target since it's an optional peer dependency (§4.1).
+
+### 4.4 Building for Production — Plugin or CLI
+
+Two paths, same output: a `pdf-manifest.json` mapping template name → compiled SSR module path, sitting next to the compiled templates.
+
+**Path A — host already has a `vite.config.ts`:**
+
+```ts
+// vite.config.ts (host app)
+import { defineConfig } from 'vite';
+import { pdfKit } from '@hshm/vuedf/vite';
+
+export default defineConfig({
+  plugins: [
+    pdfKit({ templatesDir: './src/pdf-templates' }),
+  ],
 });
 ```
 
-That's it — no `buildApp()` factory, no injected renderer object, no `dev-server.ts`/`render.dev.ts`/`render.prod.ts` split. The `if (isDev)` block is the entire difference between the two modes, and it's readable top-to-bottom in one file.
+```ts
+// src/vite-plugin.ts
+import type { Plugin } from 'vite';
+import { registerDevServer } from './dev-registry';
+import { discoverTemplates, writeManifest } from './manifest';
 
-### 4.4 Browser Preview Without Generating a PDF
+export function pdfKit(opts: { templatesDir: string; outDir?: string }): Plugin {
+  return {
+    name: 'origami-pdf-kit',
+    configureServer(server) {
+      registerDevServer(server);   // §4.3 tier 2
+    },
+    async config(_config, { command }) {
+      if (command !== 'build') return;
+      const entries = await discoverTemplates(opts.templatesDir);
+      return { build: { ssr: true, rollupOptions: { input: entries } } };
+    },
+    async closeBundle() {
+      await writeManifest(opts.templatesDir, opts.outDir ?? 'dist');
+    },
+  };
+}
+```
 
-For layout/CSS iteration, going through Gotenberg on every keystroke is unnecessary — a normal browser is a perfectly good renderer for Tailwind/flexbox layout. The dev server exposes a plain HTML entry that Vite serves with full client-side HMR:
+The host's normal `vite build` now also compiles every `.vue` file under `templatesDir` as an SSR entry and drops `pdf-manifest.json` alongside the output — no hand-written `entry-server.ts`, no separate `vite build --ssr` invocation to remember.
 
-```html
-<!-- src/dev/preview.html -->
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Template Preview</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/dev/preview-main.ts"></script>
-  </body>
-</html>
+**Path B — host has no Vite at all (plain Node/Elysia backend, no frontend build):**
+
+```bash
+npx pdf-kit build --templates ./src/pdf-templates --out ./dist
 ```
 
 ```ts
-// src/dev/preview-main.ts
-import { createApp } from "vue";
-import Invoice from "../templates/Invoice.vue";
-import fixture from "./fixtures/invoice.sample.json";
+// src/cli.ts
+import { createServer as createViteServer, build as viteBuild } from 'vite';
+import { pdfKit } from './vite-plugin';
 
-createApp(Invoice, fixture).mount("#app");
+export async function runBuild(templatesDir: string, outDir: string) {
+  await viteBuild({
+    plugins: [pdfKit({ templatesDir, outDir })],
+    build: { outDir },
+  });
+}
 ```
 
-Visiting `http://localhost:8080/dev/preview.html` opens the template in-browser with sample data and standard Vite HMR — edits to `Invoice.vue` update the page instantly, same as any normal Vite app. This is the fast loop; hitting `/api/v1/generate-pdf` is reserved for verifying the actual PDF-specific concerns (pagination, print CSS, header/footer measurement via Browserless).
+The CLI is literally the plugin driving a throwaway, internal Vite build — Path B is Path A with `pdf-kit` supplying the `vite.config.ts` instead of the host writing one. A host can start on Path B and switch to Path A later (e.g. once they add their own frontend) without changing a single template file.
 
-### 4.5 The Production Build
+## 5. Consumer Integration Examples
 
-Production still builds once, ahead of time, and never touches Vite at runtime.
+The whole point: the consumer's router is untouched by `pdf-kit`. Three different frameworks, same core call.
 
-```bash
-pnpm run build
-# vite build --ssr src/entry-server.ts --outDir dist   (SSR bundle server.ts imports in prod)
-# vite build --outDir dist/client                       (static assets, Base64-inlined per §3.3)
-# tsc / esbuild src/server.ts -> dist-server/server.js  (the entrypoint itself, unbundled logic)
+```ts
+// Elysia
+import { Elysia } from 'elysia';
+import { createPdfKit } from '@hshm/vuedf';
+
+const pdfKit = createPdfKit({
+  templatesDir: new URL('./pdf-templates', import.meta.url).pathname,
+  gotenbergUrl: process.env.GOTENBERG_URL!,
+});
+
+new Elysia()
+  .post('/invoices/:id/pdf', async ({ params, set }) => {
+    const data = await getInvoiceData(params.id);
+    set.headers['Content-Type'] = 'application/pdf';
+    set.headers['Content-Disposition'] = `attachment; filename="invoice-${params.id}.pdf"`;
+    return pdfKit.generatePdf('Invoice', data);
+  })
+  .listen(3000);
 ```
 
-`server.ts`'s `if (isDev)` branch means the compiled prod entrypoint still contains the dev-only `import('vite')` call as dead code unless it's tree-shaken. In practice this is a non-issue — `vite` stays a `devDependency`, so the prod image's `node_modules` doesn't even have it installed; the branch would throw on `import` if it were ever hit, which it never is because `NODE_ENV=production` is set in the Dockerfile (§6). If you'd rather not ship that branch to prod at all, `esbuild` can `define: { 'process.env.NODE_ENV': '"production"' }` and dead-code-eliminate it at build time — worth doing, not required.
+```ts
+// Express — same createPdfKit() instance, different router
+app.get('/invoices/:id/pdf', async (req, res) => {
+  const data = await getInvoiceData(req.params.id);
+  res.setHeader('Content-Type', 'application/pdf');
+  const stream = await pdfKit.generatePdf('Invoice', data);
+  Readable.fromWeb(stream).pipe(res);
+});
+```
 
-## 5. Infrastructure (Docker Compose)
+```ts
+// Hono — same again
+app.get('/invoices/:id/pdf', async (c) => {
+  const data = await getInvoiceData(c.req.param('id'));
+  const stream = await pdfKit.generatePdf('Invoice', data);
+  return new Response(stream, { headers: { 'Content-Type': 'application/pdf' } });
+});
+```
 
-The full request-handling logic — validation, SSR render call, `?preview=html` shortcut, Gotenberg packaging, PDF streaming — lives entirely in `src/server.ts` from §4.3. There's no separate "orchestration flow" writeup here anymore; that section _was_ this section, just with the file split back in.
+Live template editing (§4.3) works identically under all three — it's a property of `createPdfKit()`, not of the router.
 
-Production and development use **separate compose files**; dev never builds or ships Vite in an image at all — it bind-mounts source and runs `pnpm dev` directly.
+## 6. Infrastructure (Docker Compose)
+
+Only Gotenberg, Browserless, and Redis are separate containers now — `pdf-kit` runs inside whatever container hosts the consumer's own app, so there's no "orchestrator" image to build or version independently of the app that uses it.
 
 ```yaml
-# docker-compose.yml (production)
+# docker-compose.yml — infra the library talks to; the app itself is the consumer's own image
 services:
-  pdf-orchestrator:
-    build:
-      context: .
-      dockerfile: Dockerfile # node:20-alpine, pnpm install --prod, COPY dist/
-    ports:
-      - "8080:8080"
-    environment:
-      - REDIS_URL=redis://redis:6379
-      - GOTENBERG_URL=http://gotenberg:3000
-    depends_on: [gotenberg, browserless, redis]
-
   gotenberg:
     image: gotenberg/gotenberg:8
     ports: ["3000:3000"]
@@ -323,47 +328,11 @@ services:
     ports: ["6379:6379"]
 ```
 
-```yaml
-# docker-compose.dev.yml
-services:
-  pdf-orchestrator:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev # installs devDependencies too (vite, tsx)
-    command: pnpm dev
-    volumes:
-      - ./src:/app/src # live source, no rebuild/redeploy on edit
-      - /app/node_modules # keep container's node_modules, don't shadow with host
-    ports:
-      - "8080:8080"
-    environment:
-      - REDIS_URL=redis://redis:6379
-      - GOTENBERG_URL=http://gotenberg:3000
-    depends_on: [gotenberg, browserless, redis]
+A consumer's own `docker-compose.dev.yml` just bind-mounts their app source as usual — `pdf-kit`'s dev-mode Vite fallback (§4.3, tier 3) needs no extra container or port of its own.
 
-  gotenberg:
-    image: gotenberg/gotenberg:8
-    ports: ["3000:3000"]
+## 7. End-to-End Testing Strategy
 
-  browserless:
-    image: browserless/chrome:latest
-    ports: ["3001:3000"]
+Two layers, since there are now two audiences: the library itself, and each consumer's usage of it.
 
-  redis:
-    image: redis:alpine
-    ports: ["6379:6379"]
-```
-
-```bash
-# local dev, full stack including Gotenberg for the rare "check the real PDF" pass
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
-
-# local dev, orchestrator only (fastest — most template work never needs Gotenberg)
-pnpm dev
-```
-
-## 6. End-to-End (E2E) Testing Strategy
-
-Testing runs `server.ts` twice: once with `NODE_ENV=production` against a real `dist/` build (to catch anything that only manifests after bundling — asset inlining, CSS purge differences between Vite's dev transform and its production build), and once with `NODE_ENV` unset to exercise the `ssrLoadModule` path. Same app, same routes, same test file — only the env var driving which branch of `if (isDev)` runs differs. Vitest + `supertest` drive the Elysia endpoints; the resulting PDF buffer is parsed with `pdf-parse` to assert on text content and page count.
-
-A lighter Vitest suite calls the dev branch's render logic directly (no HTTP layer) so template authors get fast unit-level feedback on SSR output without needing Gotenberg at all.
+- **Library tests** (in `@hshm/vuedf`'s own repo): Vitest exercises `createPdfKit()` directly against a fixture `templatesDir`, in both `mode: 'development'` (asserting `ssrLoadModule` is used, tier 3 fallback) and `mode: 'production'` (asserting the manifest path is read and no `vite` import occurs — this is checked by running that test in a sandbox with `vite` uninstalled, proving the optional-peer-dependency claim in §4.1 actually holds).
+- **Consumer tests**: `supertest`-style requests against the consumer's own router (Elysia/Express/Hono), asserting the route returns `Content-Type: application/pdf` and that `pdf-parse` can read the resulting buffer — no different from testing any other route in their app, since `pdf-kit` doesn't introduce a network hop to mock.
