@@ -26,8 +26,8 @@ pub async fn setup_projects(non_interactive: bool) -> eyre::Result<()> {
 }
 
 fn prompt_projects() -> eyre::Result<Vec<Project>> {
-    let never_projects = vec![Project::Traefik, Project::Infra];
-    let required_projects = vec![Project::DevEnvironment];
+    let never_projects = [Project::Traefik, Project::Infra];
+    let required_projects = [Project::DevEnvironment];
 
     let projects = Project::iter()
         .filter(|p| !required_projects.contains(p) && !never_projects.contains(p))

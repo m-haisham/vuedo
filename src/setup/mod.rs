@@ -147,16 +147,15 @@ async fn set_alias_prompt(
 
     tracing::info!("Setting {key} to {:?}", path);
     std::env::set_var(key, &path);
-    append_to_file(&dotaliases, &format!("export {key}={}", path.display())).await?;
+    append_to_file(dotaliases, &format!("export {key}={}", path.display())).await?;
 
     Ok(path)
 }
 
 async fn append_to_file(file_path: &Path, line: &str) -> eyre::Result<()> {
     let mut file = OpenOptions::new()
-        .write(true)
         .append(true)
-        .open(&file_path)
+        .open(file_path)
         .map_err(|e| eyre!(e))
         .wrap_err_with(|| format!("Failed to open file: {}", file_path.display()))?;
 
