@@ -19,6 +19,7 @@ pub enum Project {
     Nest,
     SoPackageSerializer,
     ApiClients,
+    GroundHandlingApp,
 }
 
 impl Project {
@@ -35,6 +36,7 @@ impl Project {
             Project::Nest => "nest",
             Project::SoPackageSerializer => "so-package-serializer",
             Project::ApiClients => "api-clients",
+            Project::GroundHandlingApp => "agents-mobile-app",
         }
     }
 
@@ -51,6 +53,7 @@ impl Project {
             Project::Nest => "nest-app",
             Project::SoPackageSerializer => "so-package-serializer",
             Project::ApiClients => "api-clients",
+            Project::GroundHandlingApp => "agents-mobile-app",
         }
     }
 
@@ -73,6 +76,7 @@ impl Project {
             Project::Nest => Some(Container::Nest),
             Project::SoPackageSerializer => None,
             Project::ApiClients => None,
+            Project::GroundHandlingApp => None,
         }
     }
 }
@@ -94,6 +98,7 @@ impl Display for Project {
                 Project::Nest => "Nest",
                 Project::SoPackageSerializer => "SoPackageSerializer",
                 Project::ApiClients => "ApiClients",
+                Project::GroundHandlingApp => "GroundHandlingApp",
             }
         )
     }

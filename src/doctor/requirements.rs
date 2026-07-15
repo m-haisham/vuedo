@@ -13,6 +13,10 @@ impl ProjectRequirements {
     pub fn laravel_lib() -> Self {
         Self { database: false }
     }
+
+    pub fn flutter_app() -> Self {
+        Self { database: false }
+    }
 }
 
 pub fn get_project_requirements(project: &Project) -> ProjectRequirements {
@@ -28,5 +32,6 @@ pub fn get_project_requirements(project: &Project) -> ProjectRequirements {
         Project::Nest => ProjectRequirements::laravel_app(),
         Project::SoPackageSerializer => ProjectRequirements::laravel_lib(),
         Project::ApiClients => ProjectRequirements::laravel_lib(),
+        Project::GroundHandlingApp => ProjectRequirements::flutter_app(),
     }
 }

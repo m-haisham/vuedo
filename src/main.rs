@@ -136,6 +136,9 @@ pub async fn main() -> eyre::Result<()> {
                 eyre::bail!("Value provided without key");
             }
         },
+        Commands::Git { rest } => {
+            commands::run_git_command_all_projects(context, rest).await?;
+        }
         Commands::Traefik { command } => {
             project_command(context, None, Container::Traefik, command).await?;
         }

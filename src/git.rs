@@ -5,16 +5,13 @@ use std::{
     str::FromStr,
 };
 
-use eyre::{bail, eyre, Context};
+use eyre::{eyre, Context};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 use tokio::process::Command;
 
-use crate::{
-    context::{AppContext, WorkingDir},
-    env,
-};
+use crate::{context::WorkingDir, env};
 
 #[derive(
     Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash, EnumIter,
@@ -33,6 +30,7 @@ pub enum Repository {
     Nest,
     SoPackageSerializer,
     ApiClients,
+    GroundHandlingApp,
 }
 
 impl Repository {
@@ -54,6 +52,7 @@ impl Repository {
                 "git@bitbucket.org:humtravel/so-package-serializer.git"
             }
             Repository::ApiClients => "git@bitbucket.org:humtravel/api-clients.git",
+            Repository::GroundHandlingApp => "git@bitbucket.org:humtravel/agents-mobile-app.git",
         }
     }
 
@@ -71,6 +70,7 @@ impl Repository {
             Repository::Nest => "nest-app",
             Repository::SoPackageSerializer => "so-package-serializer",
             Repository::ApiClients => "api-clients",
+            Repository::GroundHandlingApp => "agents-mobile-app",
         }
     }
 
@@ -99,6 +99,7 @@ impl Display for Repository {
                 Repository::Nest => "nest",
                 Repository::SoPackageSerializer => "so-package-serializer",
                 Repository::ApiClients => "api-clients",
+                Repository::GroundHandlingApp => "ground-handling-app",
             }
         )
     }
@@ -121,6 +122,7 @@ impl FromStr for Repository {
             "nest" => Ok(Repository::Nest),
             "so-package-serializer" => Ok(Repository::SoPackageSerializer),
             "api-clients" => Ok(Repository::ApiClients),
+            "agents-mobile-app" => Ok(Repository::GroundHandlingApp),
             _ => Err(eyre!("Invalid repository name")),
         }
     }
@@ -259,6 +261,18 @@ pub async fn set_origin(url: &str) -> eyre::Result<()> {
         .await
         .map_err(|e| eyre!(e))
         .wrap_err("Failed to set origin URL")?;
+
+    Ok(())
+}
+
+pub async fn git_command(dir: &Path, args: &[&str]) -> eyre::Result<()> {
+    Command::new("git")
+        .current_dir(dir)
+        .args(args)
+        .status()
+        .await
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to run git command")?;
 
     Ok(())
 }
