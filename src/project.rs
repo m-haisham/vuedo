@@ -79,15 +79,26 @@ pub fn dir_name_to_project<'a>(name: &str) -> Option<&'static str> {
 
 #[derive(Debug, Parser)]
 pub enum ProjectCommands {
+    /// Start the project
     Up { rest: Vec<String> },
+    /// Stop the project
     Down { rest: Vec<String> },
+    /// Restart the project
     Restart { rest: Vec<String> },
+    /// Start an interactive shell in the project
     Shell { rest: Vec<String> },
+    /// Alias for node in the project
     Node { rest: Vec<String> },
+    /// Alias for npm in the project
     Npm { rest: Vec<String> },
+    /// Alias for yarn in the project
     Yarn { rest: Vec<String> },
+    /// Alias for php in the project
     Php { rest: Vec<String> },
+    /// Alias for artisan in the project
     Artisan { rest: Vec<String> },
+    /// Alias for composer in the project
     Composer { rest: Vec<String> },
+    /// Alias for phpunit in the project
     Phpunit { rest: Vec<String> },
 }

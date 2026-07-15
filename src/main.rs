@@ -42,12 +42,10 @@ pub async fn main() -> eyre::Result<()> {
             let app = args
                 .get(0)
                 .cloned()
-                .ok_or_else(|| eyre::eyre!("No app provided"))?;
+                .ok_or_else(|| eyre::eyre!("No command provided"))?;
 
             if HBT_PROJECTS.contains(&app.as_str()) {
                 let command = ProjectCommands::parse_from(args.into_iter());
-
-                println!("Running command: {:?}", command);
 
                 project_command(app, command).await?;
             } else if let Some(app) = project::detect_project()? {
@@ -56,11 +54,9 @@ pub async fn main() -> eyre::Result<()> {
 
                 let command = ProjectCommands::parse_from(project_args.into_iter());
 
-                println!("Running command: {:?}", command);
-
                 project_command(app, command).await?;
             } else {
-                println!("App not found");
+                eyre::bail!("No project detected and no project provided");
             }
         }
     }
