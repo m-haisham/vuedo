@@ -82,11 +82,6 @@ pub enum Commands {
         /// The value to set the key to
         value: Option<String>,
     },
-    /// Run a git command for all projects
-    Git {
-        #[arg(allow_hyphen_values = true, hide = true)]
-        rest: Vec<String>,
-    },
     /// Run a command for traefik
     Traefik {
         #[command(subcommand)]
@@ -154,6 +149,11 @@ pub enum GlobalCommands {
     Down { rest: Vec<String> },
     /// Restart all projects
     Restart { rest: Vec<String> },
+    /// Run a git command for all projects
+    Git {
+        #[arg(allow_hyphen_values = true, hide = true)]
+        rest: Vec<String>,
+    },
 }
 
 #[derive(Debug, Subcommand)]

@@ -23,11 +23,11 @@ use color_eyre::config::HookBuilder;
 use commands::{get_config, print_config, set_config};
 use context::AppContext;
 use docker::Container;
-use eyre::{bail, eyre, Context};
+use eyre::{Context, bail, eyre};
 use git::current_branch;
 use infra::set_current_infra;
 use kebab::kebabify;
-use project::{dir_name_to_project, Project};
+use project::{Project, dir_name_to_project};
 use snapshot::SnapshotOptions;
 use std::path::PathBuf;
 use tracing::level_filters::LevelFilter;
@@ -97,6 +97,9 @@ pub async fn main() -> eyre::Result<()> {
                 commands::stop_all_projects(&rest).await?;
                 commands::start_all_projects(&rest).await?;
             }
+            GlobalCommands::Git { rest } => {
+                commands::run_git_command_all_projects(context, rest).await?;
+            }
         },
         Commands::Snapshot { command } => match command {
             SnapshotCommands::Create {
@@ -133,9 +136,6 @@ pub async fn main() -> eyre::Result<()> {
                 eyre::bail!("Value provided without key");
             }
         },
-        Commands::Git { rest } => {
-            commands::run_git_command_all_projects(context, rest).await?;
-        }
         Commands::Traefik { command } => {
             project_command(context, None, Container::Traefik, command).await?;
         }
