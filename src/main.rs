@@ -1,4 +1,5 @@
 mod cli;
+mod commands;
 mod compress;
 mod db;
 mod docker;
@@ -180,6 +181,7 @@ pub async fn main() -> eyre::Result<()> {
                 db::restore(&project_db, &dump_file).await?;
             }
         }
+        Commands::Checkout { branch, migrate } => commands::checkout(branch, migrate).await?,
         Commands::All { command } => match command {
             GlobalCommands::Up { rest } => {
                 global::start_all_projects(&rest).await?;

@@ -7,7 +7,7 @@ use strum::IntoEnumIterator;
 use crate::{
     compress, docker,
     infra::set_current_infra,
-    project::{read_project_env, Project},
+    project::{read_project_env, Project, ProjectEnv},
 };
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -29,7 +29,7 @@ pub async fn get_configured_dbs() -> eyre::Result<Vec<ProjectDb>> {
             continue;
         }
 
-        let project_env = read_project_env(&project).await?;
+        let project_env = read_project_env::<ProjectEnv>(&project).await?;
         let Some(project_env) = project_env else {
             tracing::warn!("No environment found for {}", project.name());
             continue;

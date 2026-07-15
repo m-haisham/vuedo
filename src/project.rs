@@ -1,5 +1,5 @@
 use eyre::{eyre, WrapErr};
-use serde::Deserialize;
+use serde::{de::DeserializeOwned, Deserialize};
 use std::{env::set_current_dir, fmt::Display};
 use strum::EnumIter;
 
@@ -178,7 +178,10 @@ pub struct ProjectEnv {
 }
 
 #[tracing::instrument]
-pub async fn read_project_env(project: &Project) -> eyre::Result<Option<ProjectEnv>> {
+pub async fn read_project_env<T>(project: &Project) -> eyre::Result<Option<T>>
+where
+    T: DeserializeOwned,
+{
     tracing::info!("Reading environment for project: {}", project.name());
 
     let Some(project_dir) = project.dir_name() else {

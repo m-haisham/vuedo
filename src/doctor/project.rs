@@ -39,7 +39,10 @@ pub async fn check_project_health(project: Project, dir: &Path) -> eyre::Result<
         println!("  - Git origin: Not set");
     }
 
-    let env = read_project_env(&project).await.ok().flatten();
+    let env = read_project_env::<ProjectEnv>(&project)
+        .await
+        .ok()
+        .flatten();
 
     if let Some(ref env) = env {
         println!("  - Environment:");

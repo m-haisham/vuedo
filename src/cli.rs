@@ -19,11 +19,11 @@ use crate::kebab::Kebab;
 #[clap(version, about)]
 pub struct Cli {
     /// Increase verbosity for debugging purposes.
-    #[clap(short, long, action = clap::ArgAction::Count)]
+    #[arg(short, long, action = clap::ArgAction::Count)]
     pub verbose: u8,
 
     /// Run the command in non-interactive mode (dangerous).
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub non_interactive: bool,
 
     #[command(subcommand)]
@@ -40,6 +40,15 @@ pub enum Commands {
     Restore { key: Kebab },
     /// Set up the development environment
     Setup,
+    Checkout {
+        /// The branch to check out, defaults to branch in current project
+        #[arg(short, long)]
+        branch: Option<String>,
+
+        /// Migrate the database after checking out the branch
+        #[arg(short, long)]
+        migrate: bool,
+    },
     /// Run a command for all projects
     All {
         #[command(subcommand)]

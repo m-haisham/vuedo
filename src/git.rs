@@ -3,6 +3,22 @@ use std::path::Path;
 use eyre::{eyre, Context};
 use tokio::process::Command;
 
+pub async fn checkout(branch_name: &str) -> eyre::Result<()> {
+    let output = Command::new("git")
+        .arg("checkout")
+        .arg(branch_name)
+        .output()
+        .await
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to checkout branch")?;
+
+    if !output.status.success() {
+        return Err(eyre!("Failed to checkout branch"));
+    }
+
+    Ok(())
+}
+
 pub async fn current_branch() -> eyre::Result<String> {
     let output = Command::new("git")
         .arg("branch")
