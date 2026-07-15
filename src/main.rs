@@ -10,6 +10,7 @@ mod infra;
 mod kebab;
 mod project;
 mod setup;
+mod update;
 mod utils;
 
 use std::{
@@ -45,12 +46,14 @@ pub async fn main() -> eyre::Result<()> {
         .compact()
         .init();
 
+    update::update_prompt(cli.non_interactive).await?;
+
     match cli.command {
         Commands::Doctor => {
             doctor::check_health().await?;
         }
         Commands::Setup => {
-            setup::setup().await?;
+            setup::setup(cli.non_interactive).await?;
         }
         Commands::Dump { key } => {
             set_current_infra()?;

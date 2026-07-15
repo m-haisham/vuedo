@@ -1,3 +1,6 @@
+mod env;
+mod project;
+
 use std::{
     fs::{File, OpenOptions},
     io::Write,
@@ -7,11 +10,12 @@ use std::{
 use crate::env::{get_hbt_docker_root, get_hbt_root, EnvError};
 use dialoguer::Input;
 use eyre::{eyre, Context};
+use project::setup_projects;
 
 const DOT_ALIASES: &str = "~/.Aliases";
 
 #[tracing::instrument]
-pub async fn setup() -> eyre::Result<()> {
+pub async fn setup(non_interactive: bool) -> eyre::Result<()> {
     let hbt_root = valid_path_env(get_hbt_root())?.ok();
     let hbt_docker_root = valid_path_env(get_hbt_docker_root())?.ok();
 
@@ -22,6 +26,8 @@ pub async fn setup() -> eyre::Result<()> {
             "Skipping environment setup as HBT_ROOT and HBT_DOCKER_ROOT are already set"
         );
     }
+
+    setup_projects(non_interactive).await?;
 
     Ok(())
 }

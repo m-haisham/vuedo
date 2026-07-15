@@ -1,6 +1,6 @@
 use eyre::{eyre, WrapErr};
 use serde::Deserialize;
-use std::env::set_current_dir;
+use std::{env::set_current_dir, fmt::Display};
 use strum::EnumIter;
 
 use crate::env::{get_hbt_docker_root, get_hbt_root};
@@ -52,6 +52,35 @@ impl Project {
             Project::Nest => Some("nest-app"),
         }
     }
+}
+
+impl Display for Project {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Project::Traefik => "Traefik",
+                Project::Infra => "Infra",
+                Project::Gateway => "Gateway",
+                Project::Rates => "Rates",
+                Project::Search => "Search",
+                Project::Operations => "Operations",
+                Project::Foundation => "Foundation",
+                Project::Products => "Products",
+                Project::ApiGateway => "ApiGateway",
+                Project::App => "App",
+                Project::Nest => "Nest",
+            }
+        )
+    }
+}
+
+pub fn get_project_dir(project: &Project) -> eyre::Result<std::path::PathBuf> {
+    let hbt_root = get_hbt_root()?;
+    let project_dir = hbt_root.join(project.name());
+
+    Ok(project_dir)
 }
 
 pub async fn set_current_project(project: &Project) -> eyre::Result<()> {
