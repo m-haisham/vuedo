@@ -4,6 +4,39 @@ use tokio::io::AsyncWriteExt;
 
 use crate::env::get_hbt_docker_root;
 
+#[derive(Debug)]
+pub enum Container {
+    Traefik,
+    Infra,
+    Gateway,
+    Rates,
+    Search,
+    Operations,
+    Foundation,
+    Products,
+    ApiGateway,
+    App,
+    Nest,
+}
+
+impl Container {
+    pub fn name(&self) -> &str {
+        match self {
+            Container::Traefik => "hbt-traefik",
+            Container::Infra => "hbt-infra",
+            Container::Gateway => "hbt-gateway",
+            Container::Rates => "hbt-rates",
+            Container::Search => "hbt-search",
+            Container::Operations => "hbt-operations",
+            Container::Foundation => "hbt-foundation",
+            Container::Products => "hbt-products",
+            Container::ApiGateway => "hbt-apigateway",
+            Container::App => "hbt-app",
+            Container::Nest => "hbt-nest",
+        }
+    }
+}
+
 pub async fn mysql_dump(database: &str, password: &str) -> eyre::Result<String> {
     let password = format!("-p{}", password);
 
