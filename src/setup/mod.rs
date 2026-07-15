@@ -1,4 +1,3 @@
-mod env;
 mod project;
 
 use std::{

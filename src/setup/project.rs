@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use dialoguer::MultiSelect;
 use eyre::{eyre, WrapErr};
@@ -82,14 +82,14 @@ pub async fn setup_project(project: &Project) -> eyre::Result<()> {
         tracing::info!("Project directory already exists, skipping cloning");
     }
 
-    let env_file = setup_project_env(project, &project_dir)
+    setup_project_env(&project_dir)
         .await
         .wrap_err("Failed to setup project environment")?;
 
     Ok(())
 }
 
-async fn setup_project_env(project: &Project, project_dir: &Path) -> eyre::Result<PathBuf> {
+async fn setup_project_env(project_dir: &Path) -> eyre::Result<PathBuf> {
     let env_file = project_dir.join(".env");
 
     if env_file.exists() {
