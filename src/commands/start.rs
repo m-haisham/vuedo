@@ -43,7 +43,6 @@ pub async fn check_working_branch(
     match working_branch {
         WorkingBranch::None => {
             brush.write_warning("⚠️  No active feature branch detected.")?;
-            brush.write_warning("You are not currently working on any feature branch.")?;
         }
         WorkingBranch::Single(branch) => {
             let message = format!(
