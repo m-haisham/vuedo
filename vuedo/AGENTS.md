@@ -193,7 +193,10 @@ props via Volar. The generated file is gitignored (`src/generated/`).
   `@font-face` in `app.css`; vuedo base64-inlines them at runtime.
 - All assets inline as Base64 (no runtime network fetches): imported images/fonts
   in templates are inlined by the library's `inlineAssetsPlugin` (dev + prod), and
-  local `url()` refs in `app.css` are inlined by `inlineCssAssets` before injection.
+  the `css` passed to `createPdfKit` (e.g. compiled `app.css`) is fully inlined
+  before injection — both local `url()` refs **and** `@import` rules (local files
+  and remote web-font stylesheets like Google Fonts) are resolved and embedded as
+  Base64, so the PDF makes no network requests at conversion time.
 - The library must never import `vite` at module top level (only dynamically, in
   the tier-3 fallback and the CLI) so the optional-peer-dependency guarantee
   holds. `vite-plugin.ts` uses `import type` only.

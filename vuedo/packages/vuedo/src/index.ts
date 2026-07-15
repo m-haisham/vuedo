@@ -9,7 +9,7 @@ import { loadManifest, type PdfManifest } from "./manifest.js";
 import { renderComponent } from "./render-component.js";
 import { sendToGotenberg } from "./gotenberg.js";
 import { wrapHtml } from "./html.js";
-import { inlineCssAssets, inlineHtmlAssets } from "./inline-assets.js";
+import { inlineCssAssets, inlineCssImports, inlineHtmlAssets } from "./inline-assets.js";
 import type { Discovery } from "./discover.js";
 
 export interface PdfKitOptions {
@@ -65,7 +65,7 @@ export interface PdfKit<
   close(): Promise<void>;
 }
 
-export { inlineCssAssets };
+export { inlineCssAssets, inlineCssImports };
 
 export function createPdfKit<
   Props extends Record<string, { body: any; options?: any }> = Record<
@@ -87,6 +87,22 @@ export function createPdfKit<
   let devRender: RenderFn | undefined;
   let devDiscovery: Discovery | undefined;
   let prodManifest: PdfManifest | undefined;
+  // The user-supplied `css` is inlined once (its `@import` web fonts and any
+  // `url()` asset refs become Base64) so every wrapped document is self-contained.
+  let inlinedCss: string | undefined;
+  async function ensureCss(): Promise<string> {
+    if (inlinedCss === undefined) {
+      if (!options.css) {
+        inlinedCss = "";
+      } else {
+        const base = options.assetsDir ?? assetsDir;
+        let css = await inlineCssImports(options.css, base);
+        css = await inlineCssAssets(css, base, { fetchRemote: true });
+        inlinedCss = css;
+      }
+    }
+    return inlinedCss;
+  }
 
   async function ensureDev(): Promise<void> {
     if (!devRender) {
@@ -128,7 +144,8 @@ export function createPdfKit<
     // Base64 so Gotenberg needs no network. Prod builds already inline via the
     // Vite plugin, so this is mostly a no-op there.
     const inlined = await inlineHtmlAssets(inner, assetsDir);
-    return wrapHtml(inlined, options.css);
+    const css = await ensureCss();
+    return wrapHtml(inlined, css);
   }
 
   async function renderHtml(template: any, data: any): Promise<string> {
