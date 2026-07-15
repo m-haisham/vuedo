@@ -9,6 +9,7 @@ mod global;
 mod infra;
 mod kebab;
 mod project;
+mod utils;
 
 use std::{
     fs::File,
@@ -45,8 +46,7 @@ pub async fn main() -> eyre::Result<()> {
 
     match cli.command {
         Commands::Doctor => {
-            let health = doctor::check_health().await?;
-            println!("{}", health);
+            doctor::check_health().await?;
         }
         Commands::Dump { key } => {
             set_current_infra()?;

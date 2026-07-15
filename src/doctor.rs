@@ -1,20 +1,11 @@
-use std::fmt::Display;
-
 use eyre::{eyre, Ok, WrapErr};
 
+use crate::utils::which;
+
+#[allow(dead_code)] // We expect this to be used in the future
 pub struct Health {
     env: HealthEnvironment,
     docker: HealthDocker,
-}
-
-impl Display for Health {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Environment:")?;
-        write!(f, "{}", self.env)?;
-        writeln!(f, "")?;
-        writeln!(f, "Docker:")?;
-        write!(f, "{}", self.docker)
-    }
 }
 
 pub struct HealthEnvironment {
@@ -23,21 +14,19 @@ pub struct HealthEnvironment {
     pub path: Option<String>,
 }
 
-impl Display for HealthEnvironment {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
-            f,
+impl HealthEnvironment {
+    pub fn draw(&self) {
+        println!("Environment:");
+
+        println!(
             "- HBT_ROOT: {}",
             self.hbt_root.as_deref().unwrap_or("Not set")
-        )?;
-
-        writeln!(
-            f,
+        );
+        println!(
             "- HBT_DOCKER_ROOT: {}",
             self.hbt_docker_root.as_deref().unwrap_or("Not set")
-        )?;
-
-        write!(f, "- PATH: {}", self.path.as_deref().unwrap_or("Not set"))
+        );
+        println!("- PATH: {}", self.path.as_deref().unwrap_or("Not set"));
     }
 }
 
@@ -47,23 +36,21 @@ pub struct HealthDocker {
     pub path: Option<String>,
 }
 
-impl Display for HealthDocker {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
-            f,
+impl HealthDocker {
+    pub fn draw(&self) {
+        println!("Docker:");
+
+        println!(
             "- {}",
             self.version.as_deref().unwrap_or("Version: Not available")
-        )?;
-
-        writeln!(
-            f,
+        );
+        println!(
             "- {}",
             self.compose_version
                 .as_deref()
                 .unwrap_or("Compose Version: Not available")
-        )?;
-
-        write!(f, "- PATH: {}", self.path.as_deref().unwrap_or("Not set"))
+        );
+        println!("- PATH: {}", self.path.as_deref().unwrap_or("Not set"));
     }
 }
 
@@ -74,11 +61,15 @@ pub async fn check_health() -> eyre::Result<Health> {
         path: which("hbt").await?,
     };
 
+    env.draw();
+
     let docker = HealthDocker {
         version: docker_version().await?,
         compose_version: docker_compose_version().await?,
         path: which("docker").await?,
     };
+
+    docker.draw();
 
     Ok(Health { env, docker })
 }
@@ -120,25 +111,6 @@ async fn docker_compose_version() -> eyre::Result<Option<String>> {
             .to_string();
 
         Ok(Some(version))
-    } else {
-        Ok(None)
-    }
-}
-
-async fn which(command: &str) -> eyre::Result<Option<String>> {
-    let result = tokio::process::Command::new("which")
-        .arg(command)
-        .output()
-        .await
-        .map_err(|e| eyre!(e))
-        .wrap_err(format!("Failed to check if `{}` is in the PATH", command))?;
-
-    if result.status.success() {
-        let path = String::from_utf8(result.stdout)
-            .map_err(|e| eyre!(e))
-            .wrap_err("Failed to parse `which` output")?;
-
-        Ok(Some(path))
     } else {
         Ok(None)
     }
