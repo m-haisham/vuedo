@@ -1,6 +1,6 @@
 use std::{
     env::current_dir,
-    fs::File,
+    fs::{self, create_dir_all, File},
     io::{BufReader, BufWriter, Seek, SeekFrom, Write},
     path::Path,
 };
@@ -15,7 +15,7 @@ use tempfile::TempDir;
 
 use super::{
     types::{MysqlDump, RepositoryFile, RepositorySnapshot, SnapshotManifest, SnapshotOptions},
-    utils::get_pack_repository_file_path,
+    utils::{get_pack_repository_file_path, get_pack_repository_random_file_path},
 };
 use crate::{
     compress,
@@ -47,7 +47,8 @@ pub async fn create_snapshot(context: AppContext, options: SnapshotOptions) -> e
         temp_dir_name
     );
 
-    let repositories = create_repository_snapshots(&temp_dir, &context.working_dir).await?;
+    let repositories =
+        create_repository_snapshots(&options, &temp_dir, &context.working_dir).await?;
 
     let mysql_dumps = store_database_dumps(&temp_dir, &options)
         .await
@@ -84,6 +85,7 @@ pub async fn create_snapshot(context: AppContext, options: SnapshotOptions) -> e
 
 #[tracing::instrument(skip_all)]
 pub async fn create_repository_snapshots(
+    options: &SnapshotOptions,
     temp_dir: &TempDir,
     working_dir: &WorkingDir,
 ) -> eyre::Result<Vec<RepositorySnapshot>> {
@@ -92,7 +94,7 @@ pub async fn create_repository_snapshots(
     let mut snapshots = vec![];
 
     for repository in Repository::iter() {
-        let snapshot = repository_snapshot(temp_dir, working_dir, repository).await?;
+        let snapshot = repository_snapshot(options, temp_dir, working_dir, repository).await?;
         snapshots.push(snapshot);
     }
 
@@ -101,6 +103,7 @@ pub async fn create_repository_snapshots(
 
 #[tracing::instrument(skip_all)]
 pub async fn repository_snapshot(
+    options: &SnapshotOptions,
     temp_dir: &TempDir,
     working_dir: &WorkingDir,
     repository: Repository,
@@ -108,19 +111,92 @@ pub async fn repository_snapshot(
     tracing::info!("Creating snapshot for repository: {}", repository);
 
     let repository_dir = repository.dir()?;
-    let git_info = working_dir
-        .with_working_dir(&repository_dir, async |_| git::git_info().await)
+    let (git_info, patch_file) = working_dir
+        .with_working_dir(&repository_dir, async |_| {
+            let git_info = git::git_info().await?;
+
+            let patch_file = if options.generate_patch {
+                let patch_file = repository_patch_file(temp_dir, repository).await?;
+                Some(patch_file)
+            } else {
+                None
+            };
+
+            Ok((git_info, patch_file))
+        })
         .await?;
 
     let files = repository_files(temp_dir, repository).await?;
+
     let snapshot = RepositorySnapshot {
         repository,
         branch: git_info.branch,
         origin: git_info.origin,
+        patch_file,
         files,
     };
 
     Ok(snapshot)
+}
+
+#[tracing::instrument(skip_all)]
+pub async fn repository_patch_file(
+    temp_dir: &TempDir,
+    repository: Repository,
+) -> eyre::Result<SnapshotFile> {
+    tracing::info!("Creating git patch file for repository: {}", repository);
+
+    let output_path_relative = get_pack_repository_random_file_path(repository)
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to get output path")?;
+
+    let output_path = temp_dir.path().join(&output_path_relative);
+    if let Some(parent) = output_path.parent() {
+        create_dir_all(parent)
+            .map_err(|e| eyre!(e))
+            .wrap_err_with(|| {
+                format!(
+                    "Failed to create parent directory of patch file: {}",
+                    parent.display(),
+                )
+            })?;
+    }
+
+    let output = git::git_diff()
+        .await
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to create git diff")?;
+
+    fs::write(&output_path, output)
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to write diff to output file")?;
+
+    tracing::info!(
+        "Created git patch file for repository ({}) at {}",
+        repository,
+        output_path.display()
+    );
+
+    let output_file = File::open(&output_path)
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to open output file")?;
+
+    let output_metadata = output_file
+        .metadata()
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to get output file metadata")?;
+
+    let mut output_reader = BufReader::new(output_file);
+    let hash = hash_as_hex(&mut output_reader)
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to hash output file")?;
+
+    Ok(SnapshotFile {
+        name: "git.patch".to_string(),
+        path: output_path_relative,
+        size: output_metadata.len(),
+        hash,
+    })
 }
 
 pub async fn repository_files(

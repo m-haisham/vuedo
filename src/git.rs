@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use eyre::{eyre, Context};
+use eyre::{bail, eyre, Context};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
@@ -251,6 +251,26 @@ pub async fn git_clone(url: &str, dir: &Path) -> eyre::Result<()> {
         .wrap_err("Failed to clone repository")?;
 
     Ok(())
+}
+
+pub async fn git_diff() -> eyre::Result<String> {
+    let output = Command::new("git")
+        .arg("diff")
+        .output()
+        .await
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to generate diff")?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8(output.stdout)
+            .map_err(|e| eyre!(e))
+            .wrap_err("Failed to convert git diff stdout to string")?;
+        Ok(stdout)
+    } else {
+        let stderr = String::from_utf8(output.stderr)
+            .unwrap_or_else(|e| format!("Failed to convert git diff stderr to string: {:?}", e));
+        Err(eyre!("Failed to generate git diff: {}", stderr))
+    }
 }
 
 #[derive(Debug)]

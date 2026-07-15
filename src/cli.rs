@@ -152,8 +152,11 @@ pub enum GlobalCommands {
 pub enum SnapshotCommands {
     /// Create a snapshot of the project
     Create {
+        #[arg(long, short = 'p')]
+        generate_patch: bool,
+
         /// Include specific databases in the snapshot or all databases if not specified
-        #[arg(long, short, value_delimiter = ',', num_args = 1..)]
+        #[arg(long, short = 'd', value_delimiter = ',', num_args = 1..)]
         include_databases: Option<Vec<String>>,
     },
     /// Restore a snapshot of the project

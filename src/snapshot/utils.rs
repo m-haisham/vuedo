@@ -41,3 +41,12 @@ pub fn get_pack_repository_file_path(
     let path = Path::new(REPOSITORY_FILES_DIR).join(file_name);
     Ok(path)
 }
+
+pub fn get_pack_repository_random_file_path(repository: Repository) -> eyre::Result<PathBuf> {
+    let random = rand::random::<u64>();
+    let key = format!("{}::{}", repository.dir_name(), random);
+    let hash = hash_as_hex(&mut key.as_bytes())?;
+    let file_name = format!("{}.pack", hash);
+    let path = Path::new(REPOSITORY_FILES_DIR).join(file_name);
+    Ok(path)
+}

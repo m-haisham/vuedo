@@ -102,8 +102,15 @@ pub async fn main() -> eyre::Result<()> {
             }
         },
         Commands::Snapshot { command } => match command {
-            SnapshotCommands::Create { include_databases } => {
-                let options = SnapshotOptions { include_databases };
+            SnapshotCommands::Create {
+                generate_patch,
+                include_databases,
+            } => {
+                let options = SnapshotOptions {
+                    generate_patch,
+                    include_databases,
+                };
+
                 snapshot::create_snapshot(context, options).await?;
             }
             SnapshotCommands::Restore { path } => {
