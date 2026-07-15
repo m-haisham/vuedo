@@ -66,7 +66,8 @@ pub async fn checkout(
         };
 
         let checkout_output = match checkout_result {
-            Ok(branch) => branch.to_string(),
+            Ok(applied_branch) if applied_branch == branch => branch.green().to_string(),
+            Ok(applied_branch) => applied_branch.yellow().to_string(),
             Err(e) => {
                 format!("{}", e.to_string().red())
             }
@@ -74,8 +75,8 @@ pub async fn checkout(
 
         let migrate_output = match migrate_result {
             Some(Ok(_)) => "Migrated".green().to_string(),
-            Some(Err(e)) => format!("Migration failed: {}", e.to_string().red()),
-            None => "Migration skipped".to_string(),
+            Some(Err(e)) => format!("Migration failed: {}", e.red()),
+            None => "Migration skipped".dimmed().to_string(),
         };
 
         let value = format!("{}; {}", checkout_output, migrate_output);
