@@ -90,7 +90,7 @@ async fn migrate_project_db(project: &Project) -> eyre::Result<()> {
         .map_err(|e| eyre!(e))
         .wrap_err("Failed to set current project")?;
 
-    docker::compose_exec(&["artisan", "migrate"])
+    docker::compose_exec(&["php-fpm", "artisan", "migrate"])
         .await
         .map_err(|e| eyre!(e))
         .wrap_err("Failed to run database migrations")?;
