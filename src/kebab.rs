@@ -42,19 +42,70 @@ impl FromStr for Kebab {
 }
 
 pub fn is_kebab(name: &str) -> bool {
-    name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+    if name.starts_with('-') || name.ends_with('-') {
+        return false;
+    }
+
+    if name.contains("--") {
+        return false;
+    }
+
+    name.chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
 pub fn kebabify(name: &str) -> Kebab {
     let mut kebab = String::with_capacity(name.len());
+    let mut last_was_dash = false;
 
     for c in name.chars() {
         if c.is_ascii_alphanumeric() {
             kebab.push(c.to_ascii_lowercase());
-        } else if c == ' ' {
+            last_was_dash = false;
+        } else if (c == ' ' || c == '_' || c == '-') && !last_was_dash {
             kebab.push('-');
+            last_was_dash = true;
         }
     }
 
     Kebab(kebab)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_kebab() {
+        assert!(is_kebab("hello-world"));
+        assert!(!is_kebab("hello_world"));
+        assert!(!is_kebab("hello world"));
+        assert!(!is_kebab("hello-World"));
+        assert!(!is_kebab("hello-"));
+        assert!(!is_kebab("-world"));
+    }
+
+    #[test]
+    fn test_kebabify() {
+        let cases = vec![
+            ("Hello World", "hello-world"),
+            ("HelloWorld", "helloworld"),
+            ("hello_world", "hello-world"),
+            ("hello-world", "hello-world"),
+            ("hello - world", "hello-world"),
+            ("hello--world", "hello-world"),
+        ];
+
+        for (input, expected) in cases {
+            let kebab = kebabify(input);
+            assert_eq!(
+                kebab.as_ref(),
+                expected,
+                "kebabify({}) {} != {}",
+                input,
+                kebab,
+                expected
+            );
+        }
+    }
 }
