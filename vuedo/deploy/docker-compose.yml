@@ -1,16 +1,18 @@
-# docker-compose.dev.yml
+# Production deployment for vuedo.
+# Brings up the orchestrator (built from deploy/Dockerfile) plus the
+# headless-Chromium services it coordinates with.
+#
+#   docker compose -f deploy/docker-compose.yml up
+#
 services:
   pdf-orchestrator:
     build:
-      context: .
-      dockerfile: Dockerfile.dev # installs devDependencies too (vite, tsx)
-    command: pnpm dev
-    volumes:
-      - ./src:/app/src # live source, no rebuild/redeploy on edit
-      - /app/node_modules # keep container's node_modules, don't shadow with host
+      context: ..
+      dockerfile: deploy/Dockerfile
     ports:
       - "8080:8080"
     environment:
+      - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
       - GOTENBERG_URL=http://gotenberg:3000
     depends_on: [gotenberg, browserless, redis]

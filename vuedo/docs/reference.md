@@ -87,14 +87,11 @@ The project is a single repository with two build targets — Vite (frontend com
 │   │   └── Invoice.vue
 │   ├── assets/
 │   ├── shared-types/        # Types shared between Vue props and Elysia's TypeBox schema
-│   ├── entry-server.ts      # SSR render entry — used by both dev (ssrLoadModule) and prod (bundled)
+│   ├── entry-server.ts      # SSR render entry — the one file Vite's --ssr build needs
 │   ├── dev/
 │   │   ├── preview.html     # Vite HTML entry for the live-preview harness
 │   │   └── preview-main.ts  # Mounts a template client-side with sample fixture data
-│   └── server/
-│       ├── index.ts         # Elysia app + route definitions (mode-agnostic)
-│       ├── render.dev.ts    # Dev renderer: vite.ssrLoadModule per request
-│       └── render.prod.ts   # Prod renderer: static import from dist/
+│   └── server.ts            # ONE Elysia app. Branches on NODE_ENV at boot, not at the file level.
 ├── vite.config.ts
 ├── Dockerfile
 ├── docker-compose.yml
@@ -123,85 +120,133 @@ defineProps<InvoiceData>();
 </script>
 ```
 
-### 4.3 `pnpm dev` — Zero-Build Inner Loop
+### 4.3 `pnpm dev` — Zero-Build Inner Loop, Same Elysia App
 
-Running `pnpm dev` starts a single process that exposes **both** the API and a browser preview, wired to Vite in middleware mode. There is no separate "watch/build" step to babysit.
+There is exactly **one** Elysia app and **one** entrypoint file, `src/server.ts`, used for both `pnpm dev` and production. The only thing that differs between modes is which `render()` function gets closed over at boot — decided once, with an `if`, before `.listen()` is called. Routes, validation, and the Gotenberg call are the same code path in both modes; nothing is duplicated or re-implemented per-file.
 
 ```json
 // package.json (relevant scripts)
 {
   "scripts": {
-    "dev": "tsx watch src/dev-server.ts",
+    "dev": "tsx watch src/server.ts",
     "build": "vite build --ssr src/entry-server.ts --outDir dist && vite build --outDir dist/client",
-    "start": "node dist-server/index.js"
+    "start": "node dist-server/server.js"
   }
 }
 ```
 
 ```ts
-// src/dev-server.ts
-import { createServer as createViteServer } from "vite";
-import { Elysia } from "elysia";
+// src/server.ts
+import { Elysia, t } from "elysia";
 import { node } from "@elysiajs/node";
-import { buildApp } from "./server/index";
-import { renderDev } from "./server/render.dev";
+import fs from "fs";
+import path from "path";
 
-async function main() {
-  // Vite in middleware mode: no dev server of its own on a separate port,
-  // no bundling — just on-demand transform + an HMR websocket.
+const isDev = process.env.NODE_ENV !== "production";
+const compiledCss = fs.readFileSync(
+  path.resolve("./dist/assets/style.css"),
+  "utf-8",
+);
+
+const wrapHtml = (content: string) => `
+  <!DOCTYPE html>
+  <html><head><style>${compiledCss}</style></head><body>${content}</body></html>
+`;
+
+// --- Decide the render strategy ONCE, at boot, not per-file. -------------
+// In dev, Vite runs in middleware mode: ssrLoadModule compiles + SSR-
+// transforms a .vue template on demand, using Vite's module graph for
+// invalidation. No dist/, no bundle, no separate build/watch process.
+// In prod, this branch is never evaluated — dist/entry-server.js is a
+// static import, and vite itself isn't even a dependency of the image.
+let render: (template: string, data: unknown) => Promise<string>;
+let viteMiddlewares: import("vite").Connect.Server | undefined;
+
+if (isDev) {
+  const { createServer: createViteServer } = await import("vite");
   const vite = await createViteServer({
     server: { middlewareMode: true },
     appType: "custom",
   });
-
-  const app = buildApp({
-    // Inject the dev-mode renderer, which calls vite.ssrLoadModule()
-    // fresh on every request instead of importing from dist/.
-    render: (template: string, data: unknown) =>
-      renderDev(vite, template, data),
-  });
-
-  // Mount Vite's connect middleware for the live-preview harness
-  // (serves /dev/preview.html with full HMR for visual iteration).
-  app.use(vite.middlewares);
-
-  app.listen(8080, () => {
-    console.log(
-      "🦊 Dev orchestrator on :8080 — templates hot-reload, no build step",
-    );
-  });
+  viteMiddlewares = vite.middlewares;
+  render = async (template, data) => {
+    const mod = await vite.ssrLoadModule(`/src/templates/${template}.vue`);
+    return mod.render(data);
+  };
+} else {
+  const { renderPdfBody } = await import("../dist/entry-server.js");
+  render = renderPdfBody;
 }
+// ---------------------------------------------------------------------
 
-main();
+const app = new Elysia().use(node()).post(
+  "/api/v1/generate-pdf",
+  async ({ body, query, set }) => {
+    try {
+      const rawVueHtml = await render(body.template, body.data);
+      const bodyHtml = wrapHtml(rawVueHtml);
+      const headerHtml = wrapHtml(`<div id="dynamic-header">...</div>`);
+
+      // Dev convenience: ?preview=html skips Gotenberg, returns composed
+      // SSR HTML directly. Works identically in prod, just less useful there.
+      if (query.preview === "html") {
+        set.headers = { "Content-Type": "text/html" };
+        return bodyHtml;
+      }
+
+      const form = new FormData();
+      form.append(
+        "files",
+        new Blob([bodyHtml], { type: "text/html" }),
+        "index.html",
+      );
+      form.append(
+        "files",
+        new Blob([headerHtml], { type: "text/html" }),
+        "header.html",
+      );
+      form.append("marginTop", "1");
+      form.append("marginBottom", "1");
+
+      const gotenbergRes = await fetch(
+        process.env.GOTENBERG_URL + "/forms/chromium/convert/html",
+        {
+          method: "POST",
+          body: form,
+        },
+      );
+
+      if (!gotenbergRes.ok) throw new Error("Gotenberg failed to generate PDF");
+
+      set.headers = {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${body.template}.pdf"`,
+      };
+      return gotenbergRes.body;
+    } catch (error) {
+      console.error(error);
+      set.status = 500;
+      return { error: "PDF Generation Failed" };
+    }
+  },
+  {
+    body: t.Object({ template: t.String(), data: t.Any() }),
+    query: t.Object({ preview: t.Optional(t.String()) }),
+  },
+);
+
+// Vite's connect middleware (live-preview HMR) is only mounted in dev —
+// same app instance, one extra `.use()` when the dev branch above ran.
+if (viteMiddlewares) app.use(viteMiddlewares);
+
+app.listen(8080, () => {
+  console.log(
+    `🦊 Origami PDF Service running (${isDev ? "dev, live templates" : "prod, static dist/"}) on :8080`,
+  );
+});
 ```
 
-```ts
-// src/server/render.dev.ts
-import type { ViteDevServer } from "vite";
-
-export async function renderDev(
-  vite: ViteDevServer,
-  template: string,
-  data: unknown,
-) {
-  // ssrLoadModule compiles + SSR-transforms ONLY this module and its
-  // uncached dependencies, using Vite's module graph. No dist/, no bundle.
-  const mod = await vite.ssrLoadModule(`/src/templates/${template}.vue`);
-  return mod.render(data); // see §4.4 for the render() export convention
-}
-```
-
-```ts
-// src/server/render.prod.ts
-// Statically imported at build time — bundled into dist-server/index.js.
-import { renderPdfBody } from "../../dist/entry-server.js";
-
-export async function renderProd(template: string, data: unknown) {
-  return renderPdfBody(template, data);
-}
-```
-
-`buildApp()` picks whichever renderer it's handed, so `src/server/index.ts` itself is identical between dev and prod — only the entrypoint (`dev-server.ts` vs the compiled `dist-server/index.js`) differs in which renderer it wires up. This keeps route logic, validation, and Gotenberg orchestration from ever drifting between the two modes.
+That's it — no `buildApp()` factory, no injected renderer object, no `dev-server.ts`/`render.dev.ts`/`render.prod.ts` split. The `if (isDev)` block is the entire difference between the two modes, and it's readable top-to-bottom in one file.
 
 ### 4.4 Browser Preview Without Generating a PDF
 
@@ -238,116 +283,16 @@ Production still builds once, ahead of time, and never touches Vite at runtime.
 
 ```bash
 pnpm run build
-# vite build --ssr src/entry-server.ts --outDir dist        (SSR bundle for renderer.prod.ts)
-# vite build --outDir dist/client                            (static assets, Base64-inlined per §3.3)
+# vite build --ssr src/entry-server.ts --outDir dist   (SSR bundle server.ts imports in prod)
+# vite build --outDir dist/client                       (static assets, Base64-inlined per §3.3)
+# tsc / esbuild src/server.ts -> dist-server/server.js  (the entrypoint itself, unbundled logic)
 ```
 
-## 5. Internal Orchestration Flow (Node.js + Elysia)
+`server.ts`'s `if (isDev)` branch means the compiled prod entrypoint still contains the dev-only `import('vite')` call as dead code unless it's tree-shaken. In practice this is a non-issue — `vite` stays a `devDependency`, so the prod image's `node_modules` doesn't even have it installed; the branch would throw on `import` if it were ever hit, which it never is because `NODE_ENV=production` is set in the Dockerfile (§6). If you'd rather not ship that branch to prod at all, `esbuild` can `define: { 'process.env.NODE_ENV': '"production"' }` and dead-code-eliminate it at build time — worth doing, not required.
 
-`src/server/index.ts` is mode-agnostic — it receives a `render` function via dependency injection and doesn't know or care whether it's backed by Vite middleware mode or a static `dist/` import.
+## 5. Infrastructure (Docker Compose)
 
-```ts
-// src/server/index.ts
-import { Elysia, t } from "elysia";
-import { node } from "@elysiajs/node";
-import fs from "fs";
-import path from "path";
-
-type RenderFn = (template: string, data: unknown) => Promise<string>;
-
-const compiledCss = fs.readFileSync(
-  path.resolve("./dist/assets/style.css"),
-  "utf-8",
-);
-
-const wrapHtml = (content: string) => `
-  <!DOCTYPE html>
-  <html>
-    <head><style>${compiledCss}</style></head>
-    <body>${content}</body>
-  </html>
-`;
-
-export function buildApp({ render }: { render: RenderFn }) {
-  return new Elysia().use(node()).post(
-    "/api/v1/generate-pdf",
-    async ({ body, query, set }) => {
-      try {
-        const rawVueHtml = await render(body.template, body.data);
-        const bodyHtml = wrapHtml(rawVueHtml);
-        const headerHtml = wrapHtml(`<div id="dynamic-header">...</div>`);
-
-        // Dev convenience: ?preview=html returns the composed HTML directly
-        // instead of round-tripping through Gotenberg, for quick sanity checks
-        // of the actual SSR output (as opposed to the client-mounted preview).
-        if (query.preview === "html") {
-          set.headers = { "Content-Type": "text/html" };
-          return bodyHtml;
-        }
-
-        const form = new FormData();
-        form.append(
-          "files",
-          new Blob([bodyHtml], { type: "text/html" }),
-          "index.html",
-        );
-        form.append(
-          "files",
-          new Blob([headerHtml], { type: "text/html" }),
-          "header.html",
-        );
-        form.append("marginTop", "1");
-        form.append("marginBottom", "1");
-
-        const gotenbergRes = await fetch(
-          process.env.GOTENBERG_URL + "/forms/chromium/convert/html",
-          {
-            method: "POST",
-            body: form,
-          },
-        );
-
-        if (!gotenbergRes.ok)
-          throw new Error("Gotenberg failed to generate PDF");
-
-        set.headers = {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${body.template}.pdf"`,
-        };
-
-        return gotenbergRes.body;
-      } catch (error) {
-        console.error(error);
-        set.status = 500;
-        return { error: "PDF Generation Failed" };
-      }
-    },
-    {
-      body: t.Object({
-        template: t.String(),
-        data: t.Any(),
-      }),
-      query: t.Object({
-        preview: t.Optional(t.String()),
-      }),
-    },
-  );
-}
-```
-
-Production's entrypoint (`dist-server/index.js`, compiled from `src/server-prod.ts`) is a thin wrapper:
-
-```ts
-// src/server-prod.ts
-import { buildApp } from "./server/index";
-import { renderProd } from "./server/render.prod";
-
-buildApp({ render: renderProd }).listen(8080, () => {
-  console.log("🦊 Origami PDF Service running (prod, static dist/) on :8080");
-});
-```
-
-## 6. Infrastructure (Docker Compose)
+The full request-handling logic — validation, SSR render call, `?preview=html` shortcut, Gotenberg packaging, PDF streaming — lives entirely in `src/server.ts` from §4.3. There's no separate "orchestration flow" writeup here anymore; that section _was_ this section, just with the file split back in.
 
 Production and development use **separate compose files**; dev never builds or ships Vite in an image at all — it bind-mounts source and runs `pnpm dev` directly.
 
@@ -417,8 +362,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 pnpm dev
 ```
 
-## 7. End-to-End (E2E) Testing Strategy
+## 6. End-to-End (E2E) Testing Strategy
 
-Testing runs against the **production** renderer path (`render.prod.ts` + a real `dist/` build) to catch anything that only manifests after bundling — e.g. asset inlining, CSS purge differences between Vite's dev transform and its production build. Vitest + `supertest` drive the Elysia endpoints; the resulting PDF buffer is parsed with `pdf-parse` to assert on text content and page count.
+Testing runs `server.ts` twice: once with `NODE_ENV=production` against a real `dist/` build (to catch anything that only manifests after bundling — asset inlining, CSS purge differences between Vite's dev transform and its production build), and once with `NODE_ENV` unset to exercise the `ssrLoadModule` path. Same app, same routes, same test file — only the env var driving which branch of `if (isDev)` runs differs. Vitest + `supertest` drive the Elysia endpoints; the resulting PDF buffer is parsed with `pdf-parse` to assert on text content and page count.
 
-A lighter Vitest suite runs `render.dev.ts` directly (via `vite.ssrLoadModule`, no HTTP layer) so template authors get fast unit-level feedback on SSR output without needing Gotenberg at all.
+A lighter Vitest suite calls the dev branch's render logic directly (no HTTP layer) so template authors get fast unit-level feedback on SSR output without needing Gotenberg at all.
