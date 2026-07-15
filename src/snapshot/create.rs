@@ -17,6 +17,7 @@ use crate::{
     snapshot::{types::SnapshotFile, utils::hash_file_as_hex, MANIFEST_FILE, MYSQL_DUMPS_DIR},
 };
 
+#[tracing::instrument(skip_all)]
 pub async fn create_snapshot(context: AppContext) -> eyre::Result<()> {
     tracing::info!("Creating snapshot...");
 
