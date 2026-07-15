@@ -13,6 +13,7 @@ mod kebab;
 mod project;
 mod setup;
 mod storage;
+mod ui;
 mod update;
 mod utils;
 
@@ -25,6 +26,7 @@ use std::{
 use clap::Parser;
 use cli::{Cli, Commands, GlobalCommands, ProjectCommands};
 use commands::{get_config, print_config, set_config};
+use context::AppContext;
 use dialoguer::{theme::ColorfulTheme, Confirm};
 use env::get_hbt_root;
 use eyre::{eyre, Context};
@@ -37,6 +39,10 @@ use tracing::level_filters::LevelFilter;
 #[tokio::main]
 pub async fn main() -> eyre::Result<()> {
     let cli = Cli::parse();
+
+    let context = AppContext::new(cli.verbose, cli.non_interactive)
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to initialize app context")?;
 
     let level = match cli.verbose {
         0 => LevelFilter::WARN,
