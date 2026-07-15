@@ -67,7 +67,7 @@ pub async fn checkout(
 
         let checkout_output = match checkout_result {
             Ok(applied_branch) if applied_branch == branch => branch.green().to_string(),
-            Ok(applied_branch) => applied_branch.yellow().to_string(),
+            Ok(applied_branch) => applied_branch.to_string(),
             Err(e) => {
                 format!("{}", e.to_string().red())
             }
