@@ -1,9 +1,11 @@
+use directories::ProjectDirs;
 use eyre::{eyre, WrapErr};
 use std::{
     fs::{self, create_dir_all, DirEntry, File, OpenOptions},
     io::{BufReader, BufWriter, Read, Write},
     path::Path,
 };
+use tempfile::TempDir;
 use zip::{write::FileOptions, ZipWriter};
 
 fn is_hidden(entry: &DirEntry) -> bool {
@@ -78,7 +80,7 @@ fn zip_dir_recursive(
     Ok(())
 }
 
-pub async fn unzip_dir(zip_file: BufReader<File>, dir: &Path) -> eyre::Result<()> {
+pub fn unzip_dir(zip_file: BufReader<File>, dir: &Path) -> eyre::Result<()> {
     let mut zip = zip::ZipArchive::new(zip_file)
         .map_err(|e| eyre!(e))
         .wrap_err("Failed to read zip file")?;
@@ -99,6 +101,17 @@ pub async fn unzip_dir(zip_file: BufReader<File>, dir: &Path) -> eyre::Result<()
         let file_path = dir.join(file_name);
 
         if zip_file.is_file() {
+            if let Some(parent_dir) = file_path.parent() {
+                fs::create_dir_all(parent_dir)
+                    .map_err(|e| eyre!(e))
+                    .wrap_err_with(|| {
+                        format!(
+                            "Failed to create unzip file parent directory: {}",
+                            parent_dir.display()
+                        )
+                    })?;
+            }
+
             let file = OpenOptions::new()
                 .write(true)
                 .create(true)
@@ -121,6 +134,30 @@ pub async fn unzip_dir(zip_file: BufReader<File>, dir: &Path) -> eyre::Result<()
     }
 
     Ok(())
+}
+
+#[tracing::instrument]
+pub fn unzip_to_dir_temp(data_dir: &Path, zip_path: &Path) -> eyre::Result<TempDir> {
+    let temp_dir = tempfile::tempdir_in(data_dir)
+        .map_err(|e| eyre!(e))
+        .wrap_err("Failed to get temporary directory")?;
+
+    let zip_file = File::open(zip_path)
+        .map_err(|e| eyre!(e))
+        .wrap_err_with(|| format!("Failed to open zip file: {}", zip_path.display()))?;
+
+    let zip_file = BufReader::new(zip_file);
+
+    unzip_dir(zip_file, temp_dir.path())
+        .map_err(|e| eyre!(e))
+        .wrap_err_with(|| {
+            format!(
+                "Failed to unzip to temporary directory: {}",
+                temp_dir.path().display()
+            )
+        })?;
+
+    Ok(temp_dir)
 }
 
 pub async fn gzip(content: &str) -> eyre::Result<Vec<u8>> {

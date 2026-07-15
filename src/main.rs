@@ -18,7 +18,7 @@ mod update;
 mod utils;
 
 use clap::Parser;
-use cli::{Cli, Commands, GlobalCommands, ProjectCommands};
+use cli::{Cli, Commands, GlobalCommands, ProjectCommands, SnapshotCommands};
 use commands::{get_config, print_config, set_config};
 use context::AppContext;
 use docker::Container;
@@ -86,6 +86,14 @@ pub async fn main() -> eyre::Result<()> {
             GlobalCommands::Restart { rest } => {
                 commands::stop_all_projects(&rest).await?;
                 commands::start_all_projects(&rest).await?;
+            }
+        },
+        Commands::Snapshot { command } => match command {
+            SnapshotCommands::Create => {
+                snapshot::create_snapshot(context).await?;
+            }
+            SnapshotCommands::Restore { path } => {
+                snapshot::restore_snapshot(context, &path).await?;
             }
         },
         Commands::Config { key, value } => match (key, value) {

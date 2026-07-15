@@ -3,7 +3,7 @@ use directories::ProjectDirs;
 use eyre::{eyre, Context};
 
 use crate::config::{read_config, Config};
-use std::path::PathBuf;
+use std::{fs::create_dir_all, path::PathBuf};
 
 #[derive(Debug)]
 pub struct AppContext {
@@ -33,6 +33,14 @@ impl AppContext {
 
     pub fn dirs(&self) -> eyre::Result<ProjectDirs> {
         project_dirs(&self.name)
+    }
+
+    pub fn data_dir(&self) -> eyre::Result<PathBuf> {
+        let dirs = self.dirs()?;
+        create_dir_all(dirs.data_dir())
+            .map_err(|e| eyre!(e))
+            .wrap_err("Failed to create data directory");
+        Ok(dirs.data_dir().to_path_buf())
     }
 }
 

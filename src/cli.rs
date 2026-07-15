@@ -59,6 +59,11 @@ pub enum Commands {
         #[command(subcommand)]
         command: GlobalCommands,
     },
+    /// Snapshot related commands
+    Snapshot {
+        #[command(subcommand)]
+        command: SnapshotCommands,
+    },
     /// Set or get a configuration value
     ///
     /// If no key is provided, all configuration values will be displayed.
@@ -137,6 +142,17 @@ pub enum GlobalCommands {
     Down { rest: Vec<String> },
     /// Restart all projects
     Restart { rest: Vec<String> },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SnapshotCommands {
+    /// Create a snapshot of the project
+    Create,
+    /// Restore a snapshot of the project
+    Restore {
+        /// Path to the snapshot file
+        path: PathBuf,
+    },
 }
 
 #[derive(Debug, Parser)]

@@ -94,7 +94,7 @@ pub async fn restore_all_project_dbs(context: AppContext, key: Kebab) -> eyre::R
 
         let dump_zip_file = BufReader::new(dump_zip_file);
 
-        compress::unzip_dir(dump_zip_file, &dump_unzip_dir).await?;
+        compress::unzip_dir(dump_zip_file, &dump_unzip_dir)?;
 
         tracing::info!("Unzipped dumps to {}", dump_unzip_dir.display());
     } else if dump_unzip_dir.exists() {
