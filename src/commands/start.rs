@@ -42,22 +42,28 @@ pub async fn check_working_branch(
 
     match working_branch {
         WorkingBranch::None => {
-            brush.write_warning("Not working on any feature.")?;
+            brush.write_warning("⚠️  No active feature branch detected.")?;
+            brush.write_warning("You are not currently working on any feature branch.")?;
         }
         WorkingBranch::Single(branch) => {
-            let message = format!("Working on: {}", brush.styles.bold.apply_to(branch));
+            let message = format!(
+                "✅ You are currently working on the feature branch: {}",
+                brush.styles.bold.apply_to(branch)
+            );
             brush.write_line(&message)?;
         }
         WorkingBranch::Multiple(branches) => {
-            brush.write_warning("You have multiple feature branches:")?;
+            brush.write_warning("⚠️  Multiple active feature branches detected:")?;
             brush.indented(|brush| {
                 for branch in branches {
-                    brush.write_warning(&branch)?;
+                    let branch_message = format!("• {}", branch);
+                    brush.write_warning(&branch_message)?;
                 }
                 Ok::<_, eyre::Report>(())
             })?;
+            brush.write_newline()?;
             brush.write_warning(
-                "Consider cleaning up your feature branches to avoid conflicting behaviour.",
+                "⚠️  It is recommended to clean up your feature branches to avoid potential conflicts.",
             )?;
         }
     }
