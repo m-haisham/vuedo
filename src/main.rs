@@ -185,7 +185,40 @@ pub async fn main() -> eyre::Result<()> {
                 global::start_all_projects(&rest).await?;
             }
         },
-        Commands::Project(args) => {
+        Commands::Traefik { args } => {
+            project_command_from_args(Project::Traefik, args).await?;
+        }
+        Commands::Infra { args } => {
+            project_command_from_args(Project::Infra, args).await?;
+        }
+        Commands::Gateway { args } => {
+            project_command_from_args(Project::Gateway, args).await?;
+        }
+        Commands::Rates { args } => {
+            project_command_from_args(Project::Rates, args).await?;
+        }
+        Commands::Search { args } => {
+            project_command_from_args(Project::Search, args).await?;
+        }
+        Commands::Operations { args } => {
+            project_command_from_args(Project::Operations, args).await?;
+        }
+        Commands::Foundation { args } => {
+            project_command_from_args(Project::Foundation, args).await?;
+        }
+        Commands::Products { args } => {
+            project_command_from_args(Project::Products, args).await?;
+        }
+        Commands::Api { args } => {
+            project_command_from_args(Project::ApiGateway, args).await?;
+        }
+        Commands::App { args } => {
+            project_command_from_args(Project::App, args).await?;
+        }
+        Commands::Nest { args } => {
+            project_command_from_args(Project::Nest, args).await?;
+        }
+        Commands::Fallthrough(args) => {
             let app = args
                 .get(0)
                 .cloned()
@@ -328,4 +361,12 @@ async fn project_command(project: Project, command: ProjectCommands) -> eyre::Re
     }
 
     Ok(())
+}
+
+async fn project_command_from_args(project: Project, args: Vec<String>) -> eyre::Result<()> {
+    let mut project_args = vec![project.name().to_string()];
+    project_args.extend(args.into_iter());
+
+    let command = ProjectCommands::parse_from(project_args.into_iter());
+    project_command(project, command).await
 }

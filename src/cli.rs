@@ -42,8 +42,30 @@ pub enum Commands {
         #[command(subcommand)]
         command: GlobalCommands,
     },
+    /// Run a command for traefik project
+    Traefik { args: Vec<String> },
+    /// Run a command for infra project
+    Infra { args: Vec<String> },
+    /// Run a command for gateway project
+    Gateway { args: Vec<String> },
+    /// Run a command for rates project
+    Rates { args: Vec<String> },
+    /// Run a command for search project
+    Search { args: Vec<String> },
+    /// Run a command for operations project
+    Operations { args: Vec<String> },
+    /// Run a command for foundation project
+    Foundation { args: Vec<String> },
+    /// Run a command for products project
+    Products { args: Vec<String> },
+    /// Run a command for orders project
+    Api { args: Vec<String> },
+    /// Run a command for orders project
+    App { args: Vec<String> },
+    /// Run a command for orders project
+    Nest { args: Vec<String> },
     #[command(external_subcommand)]
-    Project(Vec<String>),
+    Fallthrough(Vec<String>),
 }
 
 #[derive(Debug, Subcommand)]
