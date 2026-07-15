@@ -93,6 +93,7 @@ pub async fn unzip_dir(zip_file: BufReader<File>, dir: &Path) -> eyre::Result<()
             let file = OpenOptions::new()
                 .write(true)
                 .create(true)
+                .truncate(true)
                 .open(&file_path)
                 .map_err(|e| eyre!(e))
                 .wrap_err_with(|| {

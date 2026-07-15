@@ -91,7 +91,7 @@ pub async fn check_health() -> eyre::Result<Health> {
             }
 
             let project_health = project::check_project_health(project, &dir).await?;
-            println!("");
+            println!();
 
             projects.push(project_health);
         }

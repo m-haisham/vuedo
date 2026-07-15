@@ -61,7 +61,7 @@ pub async fn dump_project(db: &ProjectDb, dump_dir: &Path) -> eyre::Result<()> {
 
     let dump_file = dump_dir.join(format!("{}.sql.gz", db_database));
 
-    let dump = match docker::mysql_dump(&db_database, &db_password).await {
+    let dump = match docker::mysql_dump(db_database, db_password).await {
         Ok(dump) => dump,
         Err(e) => {
             return Err(eyre!(

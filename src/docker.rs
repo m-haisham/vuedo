@@ -6,10 +6,10 @@ pub async fn mysql_dump(database: &str, password: &str) -> eyre::Result<String> 
     let password = format!("-p{}", password);
 
     let mut cmd = tokio::process::Command::new("docker-compose");
-    cmd.args(&["exec", "hbt-service-mysql", "mysqldump"]);
-    cmd.args(&["-u", "root"]);
-    cmd.args(&[&password]);
-    cmd.args(&[database]);
+    cmd.args(["exec", "hbt-service-mysql", "mysqldump"]);
+    cmd.args(["-u", "root"]);
+    cmd.args([&password]);
+    cmd.args([database]);
 
     let output = cmd.output().await?;
 
@@ -27,10 +27,10 @@ pub async fn mysql_restore(database: &str, password: &str, dump: &[u8]) -> eyre:
     let password = format!("-p{}", password);
 
     let mut cmd = tokio::process::Command::new("docker-compose");
-    cmd.args(&["exec", "-T", "hbt-service-mysql", "mysql"]);
-    cmd.args(&["-u", "root"]);
-    cmd.args(&[&password]);
-    cmd.args(&[database]);
+    cmd.args(["exec", "-T", "hbt-service-mysql", "mysql"]);
+    cmd.args(["-u", "root"]);
+    cmd.args([&password]);
+    cmd.args([database]);
     cmd.stdin(Stdio::piped());
 
     let mut child = cmd.spawn().wrap_err("Failed to spawn mysql")?;
@@ -40,7 +40,7 @@ pub async fn mysql_restore(database: &str, password: &str, dump: &[u8]) -> eyre:
         .as_mut()
         .ok_or_else(|| eyre!("Failed to open stdin"))?;
 
-    child_stdin.write_all(&dump).await?;
+    child_stdin.write_all(dump).await?;
 
     let status = child.wait().await?;
 
@@ -53,7 +53,7 @@ pub async fn mysql_restore(database: &str, password: &str, dump: &[u8]) -> eyre:
 
 pub async fn compose_up(args: &[String]) -> eyre::Result<()> {
     let mut cmd = tokio::process::Command::new("docker-compose");
-    cmd.args(&["up", "-d"]);
+    cmd.args(["up", "-d"]);
     cmd.args(args);
 
     cmd.status()
@@ -66,7 +66,7 @@ pub async fn compose_up(args: &[String]) -> eyre::Result<()> {
 
 pub async fn compose_down(args: &[String]) -> eyre::Result<()> {
     let mut cmd = tokio::process::Command::new("docker-compose");
-    cmd.args(&["down"]);
+    cmd.args(["down"]);
     cmd.args(args);
 
     cmd.status()
@@ -79,7 +79,7 @@ pub async fn compose_down(args: &[String]) -> eyre::Result<()> {
 
 pub async fn compose_exec(args: &[&str]) -> eyre::Result<()> {
     let mut cmd = tokio::process::Command::new("docker-compose");
-    cmd.args(&["exec"]);
+    cmd.args(["exec"]);
     cmd.args(args);
 
     cmd.status()

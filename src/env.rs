@@ -11,7 +11,6 @@ where
     let env_keys = dotenvy::from_path_iter(path)
         .map_err(|e| eyre!(e))
         .wrap_err("Could not read env file")?
-        .into_iter()
         .collect::<Result<std::collections::HashMap<String, String>, _>>()
         .map_err(|e| eyre!(e))
         .wrap_err("Could not parse env file")?;

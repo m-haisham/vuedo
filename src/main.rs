@@ -219,8 +219,7 @@ pub async fn main() -> eyre::Result<()> {
             project_command(Project::Nest, command).await?;
         }
         Commands::Fallthrough(args) => {
-            let app = args
-                .get(0)
+            let app = args.first()
                 .cloned()
                 .ok_or_else(|| eyre::eyre!("No command provided"))?;
 
