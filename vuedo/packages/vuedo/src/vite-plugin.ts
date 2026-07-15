@@ -1,10 +1,12 @@
 import path from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
 import type { Plugin } from "vite";
 import { registerDevServer } from "./dev-registry.js";
 import { discoverLayouts } from "./discover.js";
 import { writeManifest } from "./manifest.js";
 import { generateTypes } from "./types.js";
-import { inlineAssetsPlugin } from "./inline-assets.js";
+import { inlineAssetsPlugin, inlineCssAssets } from "./inline-assets.js";
+import { compileTailwindCss } from "./tailwind.js";
 
 export interface VuedoPluginOptions {
   /** Absolute (or cwd-relative) path to the folder of `.vue` templates. */
@@ -13,6 +15,12 @@ export interface VuedoPluginOptions {
   outDir?: string;
   /** Where to write the inferred types `.d.ts`. Default: `<cwd>/src/generated/pdf-templates.d.ts`. */
   typesOut?: string;
+  /**
+   * Tailwind v4 support (on by default). On build, the plugin compiles Tailwind
+   * to `<outDir>/app.css` so production reads it directly (no runtime scan). Pass
+   * `false` to disable, or an object to override the entry / assets dir.
+   */
+  tailwind?: boolean | { input?: string; assetsDir?: string; minify?: boolean };
 }
 
 // Exported as `@hshm/vuedo/vite`. Two jobs:
@@ -40,6 +48,33 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
         opts.typesOut ??
         path.resolve(process.cwd(), "src/generated/pdf-templates.d.ts");
       await generateTypes(opts.templatesDir, typesOut);
+
+      const tailwind = opts.tailwind ?? true;
+      if (tailwind !== false) {
+        const assetsDir =
+          (typeof tailwind === "object" && tailwind.assetsDir) ||
+          path.resolve(opts.templatesDir, "..", "assets");
+        const inputExplicit = typeof tailwind === "object" && !!tailwind.input;
+        const input = inputExplicit
+          ? (tailwind as { input: string }).input
+          : path.join(assetsDir, "app.css");
+        const css = await compileTailwindCss({
+          input,
+          warnOnMissingInput: inputExplicit,
+          base: assetsDir,
+          content: [
+            { base: opts.templatesDir, pattern: "**/*.vue", negated: false },
+          ],
+          // Build output is production — minify unless explicitly disabled.
+          minify:
+            typeof tailwind === "object" && tailwind.minify !== undefined
+              ? tailwind.minify
+              : true,
+        });
+        const inlined = await inlineCssAssets(css, assetsDir);
+        await mkdir(outDir, { recursive: true });
+        await writeFile(path.resolve(outDir, "app.css"), inlined);
+      }
     },
   };
 }

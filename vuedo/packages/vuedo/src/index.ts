@@ -10,6 +10,7 @@ import { renderComponent } from "./render-component.js";
 import { sendToGotenberg } from "./gotenberg.js";
 import { wrapHtml } from "./html.js";
 import { inlineCssAssets, inlineHtmlAssets } from "./inline-assets.js";
+import { compileTailwindCss } from "./tailwind.js";
 import type { Discovery } from "./discover.js";
 
 export interface PdfKitOptions {
@@ -24,8 +25,19 @@ export interface PdfKitOptions {
   mode?: "development" | "production";
   /** Defaults to `<templatesDir>/../dist/pdf-manifest.json`. */
   manifestPath?: string;
-  /** Optional CSS inlined into every wrapped document. */
+  /**
+   * Explicit CSS inlined into every wrapped document. When set, it takes
+   * precedence over the built-in Tailwind compilation.
+   */
   css?: string;
+  /**
+   * Tailwind v4 support (on by default). `@hshm/vuedo` compiles Tailwind itself
+   * so consumers never run the Tailwind CLI: the CSS entry (`<assetsDir>/app.css`,
+   * or a built-in `@import "tailwindcss"` fallback) is compiled against the
+   * templates and inlined into every rendered document. Pass `false` to disable,
+   * or an object to point at a different entry / enable minification.
+   */
+  tailwind?: boolean | { input?: string; minify?: boolean };
   /** Folder of static assets (images/fonts) inlined as Base64. Defaults to `<templatesDir>/../assets`. */
   assetsDir?: string;
 }
@@ -66,6 +78,7 @@ export interface PdfKit<
 }
 
 export { inlineCssAssets };
+export { compileTailwindCss } from "./tailwind.js";
 
 export function createPdfKit<
   Props extends Record<string, { body: any; options?: any }> = Record<
@@ -84,9 +97,61 @@ export function createPdfKit<
     options.manifestPath ??
     path.resolve(templatesDir, "..", "dist", "pdf-manifest.json");
 
+  const tailwind = options.tailwind ?? true;
+  const tailwindInputExplicit =
+    typeof tailwind === "object" && !!tailwind.input;
+  const tailwindInput = tailwindInputExplicit
+    ? (tailwind as { input: string }).input
+    : path.join(assetsDir, "app.css");
+  // Minify by default in production; opt in/out explicitly via `tailwind.minify`.
+  const tailwindMinify =
+    typeof tailwind === "object" && tailwind.minify !== undefined
+      ? tailwind.minify
+      : !isDev;
+
   let devRender: RenderFn | undefined;
   let devDiscovery: Discovery | undefined;
   let prodManifest: PdfManifest | undefined;
+  let cachedCss: string | undefined;
+
+  // Resolves the CSS injected into every wrapped document. Order of precedence:
+  //   1. an explicit `css` option (inlined as-is);
+  //   2. Tailwind — in production, a prebuilt `app.css` next to the manifest
+  //      (written by the Vite plugin) is preferred; otherwise it is compiled on
+  //      the fly. In development it is (re)compiled per render so newly-used
+  //      utility classes show up without a build step.
+  async function resolveCss(): Promise<string> {
+    if (options.css !== undefined) {
+      if (cachedCss === undefined) {
+        cachedCss = await inlineCssAssets(options.css, assetsDir);
+      }
+      return cachedCss;
+    }
+    if (tailwind === false) return "";
+    if (!isDev && cachedCss !== undefined) return cachedCss;
+
+    let css: string | undefined;
+    if (!isDev) {
+      const prebuilt = path.resolve(path.dirname(manifestPath), "app.css");
+      try {
+        css = await (await import("node:fs/promises")).readFile(prebuilt, "utf8");
+      } catch {
+        /* no prebuilt CSS — compile below */
+      }
+    }
+    if (css === undefined) {
+      css = await compileTailwindCss({
+        input: tailwindInput,
+        warnOnMissingInput: tailwindInputExplicit,
+        base: assetsDir,
+        content: [{ base: templatesDir, pattern: "**/*.vue", negated: false }],
+        minify: tailwindMinify,
+      });
+    }
+    const inlined = await inlineCssAssets(css, assetsDir);
+    if (!isDev) cachedCss = inlined;
+    return inlined;
+  }
 
   async function ensureDev(): Promise<void> {
     if (!devRender) {
@@ -128,7 +193,7 @@ export function createPdfKit<
     // Base64 so Gotenberg needs no network. Prod builds already inline via the
     // Vite plugin, so this is mostly a no-op there.
     const inlined = await inlineHtmlAssets(inner, assetsDir);
-    return wrapHtml(inlined, options.css);
+    return wrapHtml(inlined, await resolveCss());
   }
 
   async function renderHtml(template: any, data: any): Promise<string> {

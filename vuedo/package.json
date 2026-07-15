@@ -4,9 +4,8 @@
   "description": "PDF generation service — a consumer of @hshm/vuedo",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n css,api \"tailwindcss -i ./assets/app.css -o ./dist/app.css --watch\" \"tsx watch --ignore \\\"**/*.timestamp-*.mjs\\\" src/server.ts\"",
-    "build:css": "tailwindcss -i ./assets/app.css -o ./dist/app.css",
-    "build": "vite build && pnpm build:css",
+    "dev": "tsx watch --ignore \"**/*.timestamp-*.mjs\" src/server.ts",
+    "build": "vite build",
     "start": "NODE_ENV=production tsx src/server.ts",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
@@ -28,13 +27,10 @@
     "vue": "^3.4.0"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.0.0",
     "@types/node": "^20.0.0",
     "@vitejs/plugin-vue": "^5.0.0",
     "@vue/server-renderer": "^3.4.0",
-    "concurrently": "^9.0.0",
     "pdf-parse": "^1.1.1",
-    "tailwindcss": "^4.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.4.0",
     "vite": "^5.2.0",

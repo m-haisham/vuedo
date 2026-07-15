@@ -23,8 +23,8 @@ Three exports (see `docs/reference.md` §4):
 - **`@hshm/vuedo`** — `createPdfKit(options)` returning `{ renderHtml, renderComposite, generatePdf, close }`.
 - **`@hshm/vuedo/vite`** — a Vite plugin (`vuedo({ templatesDir, outDir })`):
   registers the host's dev server (tier 2) and, on `vite build`, compiles every
-  template as an SSR entry, writes `pdf-manifest.json`, and emits the inferred
-  `PdfTemplateProps` types.
+  template as an SSR entry, writes `pdf-manifest.json`, emits the inferred
+  `PdfTemplateProps` types, and compiles Tailwind to `<outDir>/app.css`.
 - **`vuedo` CLI** — `vuedo build --templates <dir> --out <dir>` for hosts
   with no Vite of their own (Path B); it just drives the same plugin.
 
@@ -54,6 +54,7 @@ manifest.ts         writeManifest / loadManifest (entries + layouts)
 render-component.ts  shared Vue SSR (createSSRApp + renderToString)
 gotenberg.ts        Gotenberg HTTP client (returns a ReadableStream)
 html.ts             wrapHtml() document shell
+tailwind.ts         compileTailwindCss() — Tailwind v4 compiled via @tailwindcss/node + oxide
 types.ts            generateTypes() — emits the inferred PdfTemplateProps
 vite-plugin.ts      exported as '@hshm/vuedo/vite'
 cli.ts              exported as bin 'vuedo'
@@ -70,7 +71,7 @@ templates/         Vue SFCs — the PDF templates (file-based layout convention,
   pos/pos-order.vue   nested body
   pos/pos-header.vue  header (auto-pairs with pos.pos-order via folder convention)
 assets/            static assets referenced by templates (images + fonts, base64-inlined)
-  app.css           Tailwind v4 entry (compiled to dist/app.css by the build/dev scripts)
+  app.css           Tailwind v4 entry (`@import "tailwindcss";`); compiled by the library, not the consumer
   logo.png
   fonts/            custom .woff2/.ttf files (referenced from app.css @font-face)
 src/
@@ -164,12 +165,12 @@ props via Volar. The generated file is gitignored (`src/generated/`).
 - `pnpm install` — install all workspace deps
 - `pnpm --filter @hshm/vuedo build` — compile the library to `packages/vuedo/dist`
   (**do this first** — the root service and its Vite config import the built lib)
-- `pnpm dev` (root) — dev server on `:8080` (normal Elysia `app.listen`) plus a
-  Tailwind CLI `--watch` (via `concurrently`) compiling `app.css` → `dist/app.css`;
-  templates hot-compile via the library's tier-3 owned Vite, **no vite build step**
+- `pnpm dev` (root) — dev server on `:8080` (normal Elysia `app.listen`);
+  templates hot-compile via the library's tier-3 owned Vite and the library
+  compiles Tailwind per render, **no vite build / no css step**
 - `pnpm build` (root) — `vite build` with the `vuedo` plugin → `dist/` +
-  `pdf-manifest.json` + `src/generated/pdf-templates.d.ts`, then `build:css`
-  compiles Tailwind `app.css` → `dist/app.css`
+  `pdf-manifest.json` + `src/generated/pdf-templates.d.ts` + `dist/app.css`
+  (Tailwind compiled by the plugin)
 - `pnpm start` (root) — `NODE_ENV=production` server, reads the manifest
 - `pnpm typecheck` (root) — `vue-tsc --noEmit` (validates generated props)
 - `pnpm -r test` — run both suites (library + consumer)
@@ -186,11 +187,16 @@ props via Volar. The generated file is gitignored (`src/generated/`).
 - Each template gets **its own typed Elysia route** (e.g. `POST /invoice`), not a
   single generic public endpoint — TypeBox validates the `{ header?, body, footer?,
   options }` payload per template at the edge.
-- **Styling**: templates use Tailwind utility classes. `app.css` (`@import
-  "tailwindcss";`) is compiled to `dist/app.css` by the `dev`/`build:css` scripts
-  and passed to `createPdfKit({ css })`, which `wrapHtml` injects into every
-  rendered section. Custom fonts go in `assets/fonts/` and are referenced via
-  `@font-face` in `app.css`; vuedo base64-inlines them at runtime.
+- **Styling**: templates use Tailwind utility classes. **Tailwind v4 is owned by
+  `@hshm/vuedo`** (`tailwind.ts`, via `@tailwindcss/node` + `@tailwindcss/oxide`) —
+  consumers do **not** run the Tailwind CLI. The library reads `assets/app.css`
+  (`@import "tailwindcss";`), scans the templates, and `wrapHtml` injects the
+  compiled CSS into every rendered section: in dev it recompiles per render; in
+  prod it reads the `dist/app.css` the Vite plugin wrote at build (falling back to
+  a runtime compile). `createPdfKit({ tailwind: false })` disables it, and an
+  explicit `css` option still overrides everything. Custom fonts go in
+  `assets/fonts/`, referenced via `@font-face` in `app.css`; vuedo base64-inlines
+  them at runtime.
 - All assets inline as Base64 (no runtime network fetches): imported images/fonts
   in templates are inlined by the library's `inlineAssetsPlugin` (dev + prod), and
   local `url()` refs in `app.css` are inlined by `inlineCssAssets` before injection.
