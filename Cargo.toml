@@ -1,7 +1,7 @@
 [package]
 name = "hbt"
 description = "A command-line tool for interacting with the Hummingbird development stack."
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 repository = "https://github.com/humtravel/hbt-cli"
 homepage = "https://github.com/humtravel/hbt-cli"
