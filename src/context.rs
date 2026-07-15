@@ -1,6 +1,5 @@
+use crate::config::{read_config, Config};
 use std::path::PathBuf;
-
-use config::Config;
 
 #[derive(Debug)]
 pub struct AppContext {
@@ -8,6 +7,27 @@ pub struct AppContext {
     pub working_dir: WorkingDir,
 }
 
+impl AppContext {
+    pub fn new() -> eyre::Result<Self> {
+        let config = read_config()?;
+        let working_dir = WorkingDir::new()?;
+        Ok(Self {
+            config,
+            working_dir,
+        })
+    }
+}
+
+/// Represents the current working directory
+///
+/// This struct assumes that the current working directory
+/// is only changed using change_dir() method and not by
+/// any other means.
+///
+/// This struct is needed to keep track of the current working directory
+/// in a more visible way. Using `std::env::current_dir()` directly
+/// makes it hard to track the current working directory and when it
+/// might have been changed.
 #[derive(Debug)]
 pub struct WorkingDir {
     path: PathBuf,
