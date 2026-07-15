@@ -77,13 +77,8 @@ impl BrushContext<'_> {
     }
 
     pub fn heading(&self, heading: &str) -> eyre::Result<()> {
-        self.term.write_line(
-            &Style::new()
-                .bold()
-                .apply_to(format!("== {heading} =="))
-                .to_string(),
-        )?;
-
+        self.term
+            .write_line(&Style::new().bold().apply_to(heading).to_string())?;
         Ok(())
     }
 

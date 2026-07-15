@@ -1,6 +1,11 @@
+use std::fmt::Display;
+
 use eyre::{eyre, WrapErr};
 
-use crate::{ui::traits::Draw, utils::which};
+use crate::{
+    ui::{components::LabeledLine, traits::Draw},
+    utils::which,
+};
 
 #[derive(Debug)]
 pub struct DockerHealth {
@@ -26,6 +31,9 @@ impl DockerHealth {
 impl Draw for DockerHealth {
     fn draw_compact(&self, brush: &crate::ui::BrushContext<'_>) -> eyre::Result<()> {
         brush.heading("Docker")?;
+        LabeledLine::from_err_option("Version", &self.version).draw(brush)?;
+        LabeledLine::from_err_option("Compose Version", &self.compose_version).draw(brush)?;
+        LabeledLine::from_err_option("Path", &self.path).draw(brush)?;
         Ok(())
     }
 
@@ -40,9 +48,21 @@ pub struct DockerVersion {
     build: String,
 }
 
+impl Display for DockerVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ({})", self.version, self.build)
+    }
+}
+
 #[derive(Debug)]
 pub struct DockerComposeVersion {
     version: String,
+}
+
+impl Display for DockerComposeVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.version)
+    }
 }
 
 async fn docker_version() -> eyre::Result<Option<DockerVersion>> {

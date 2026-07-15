@@ -9,6 +9,15 @@ pub struct LabeledLine {
 }
 
 impl LabeledLine {
+    pub fn labeled(label: String) -> Self {
+        Self {
+            label: label.to_string(),
+            value: None,
+            warnings: vec![],
+            errors: vec![],
+        }
+    }
+
     pub fn new(label: String, value: String) -> Self {
         Self {
             label,
@@ -26,6 +35,17 @@ impl LabeledLine {
     pub fn with_errors(mut self, errors: Vec<String>) -> Self {
         self.errors = errors;
         self
+    }
+
+    pub fn from_err_option<T>(label: &str, result: &eyre::Result<Option<T>>) -> Self
+    where
+        T: ToString,
+    {
+        match result {
+            Ok(Some(value)) => Self::new(label.to_string(), value.to_string()),
+            Ok(None) => Self::labeled(label.to_string()).with_warnings(vec!["Not set".to_string()]),
+            Err(e) => Self::labeled(label.to_string()).with_errors(vec![e.to_string()]),
+        }
     }
 }
 
