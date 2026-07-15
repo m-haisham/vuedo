@@ -6,9 +6,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::env::{get_hbt_docker_root, get_hbt_root, EnvError};
+use crate::env::{EnvError, get_hbt_docker_root, get_hbt_root};
 use dialoguer::Input;
-use eyre::{eyre, Context};
+use eyre::{Context, eyre};
 use project::setup_projects;
 
 const DOT_ALIASES: &str = "~/.Aliases";
@@ -146,7 +146,7 @@ async fn set_alias_prompt(
     }
 
     tracing::info!("Setting {key} to {:?}", path);
-    std::env::set_var(key, &path);
+    unsafe { std::env::set_var(key, &path) };
     append_to_file(dotaliases, &format!("export {key}={}", path.display())).await?;
 
     Ok(path)
