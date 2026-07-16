@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <style>
+            @page {
+                margin-top: 0px;
+                margin-bottom: 0px;
+            }
+            html,
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                padding-top: 0px;
+                font-family: sans-serif;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .hdr {
+                width: 100%;
+                box-sizing: border-box;
+                background: #0f172a;
+                color: #fff;
+                /* Pull the banner up to cover Chromium's default per-page header
+           offset (~0.21in) so the dark bg reaches the very top edge.
+           The script adds the same amount to marginTop so nothing clips. */
+                margin-top: -0.21in;
+                padding: calc(16px + 0.19in) 32px 16px;
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+            }
+            .hdr .num {
+                font-size: 20px;
+                font-weight: 600;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="hdr">
+            <div>
+                <div style="font-size: 22px; font-weight: 700">Acme Corp</div>
+                <div style="color: #cbd5e1">billing@acme.test</div>
+            </div>
+            <div style="text-align: right">
+                <div
+                    style="font-size: 11px; letter-spacing: 3px; color: #94a3b8"
+                >
+                    INVOICE
+                </div>
+                <div class="num">TEST-001</div>
+                <div style="color: #cbd5e1">Issued 2026-07-16</div>
+                <div style="color: #cbd5e1">Issued 2026-07-16</div>
+                <div style="color: #cbd5e1">Issued 2026-07-16</div>
+                <div style="color: #cbd5e1">Issued 2026-07-16</div>
+            </div>
+        </div>
+    </body>
+</html>

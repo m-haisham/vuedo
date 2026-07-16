@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        font-family: sans-serif;
+        color: #1e293b;
+      }
+      .inv {
+        padding: 24px 32px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th {
+        text-align: left;
+        border-bottom: 2px solid #0f172a;
+        color: #64748b;
+        font-size: 11px;
+        text-transform: uppercase;
+        padding: 6px 0;
+      }
+      td {
+        padding: 6px 0;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .right {
+        text-align: right;
+      }
+      .totals {
+        width: 240px;
+        margin-left: auto;
+        margin-top: 20px;
+        font-size: 13px;
+      }
+      .totals .row {
+        display: flex;
+        justify-content: space-between;
+        color: #64748b;
+        padding: 2px 0;
+      }
+      .totals .grand {
+        border-top: 2px solid #0f172a;
+        font-weight: 700;
+        font-size: 18px;
+        color: #0f172a;
+        margin-top: 4px;
+        padding-top: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="inv">
+      <div style="margin-bottom: 24px">
+        <div style="font-size: 11px; letter-spacing: 2px; color: #94a3b8">
+          Billed to
+        </div>
+        <div style="font-size: 18px; font-weight: 600">Jane Doe</div>
+        <div style="color: #475569">Globex</div>
+        <div style="color: #475569">1 Main St, Springfield</div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th class="right">Qty</th>
+            <th class="right">Unit</th>
+            <th class="right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Widget</td>
+            <td class="right">2</td>
+            <td class="right">$10.00</td>
+            <td class="right">$20.00</td>
+          </tr>
+          <tr>
+            <td>Gadget</td>
+            <td class="right">1</td>
+            <td class="right">$25.00</td>
+            <td class="right">$25.00</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <div class="row"><span>Subtotal</span><span>$45.00</span></div>
+        <div class="row"><span>Tax (8%)</span><span>$3.60</span></div>
+        <div class="row grand"><span>Total</span><span>$48.60</span></div>
+      </div>
+    </div>
+  </body>
+</html>
