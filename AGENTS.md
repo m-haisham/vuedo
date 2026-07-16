@@ -9,7 +9,7 @@ This is a **pnpm workspace** with two parts:
 - **`packages/vuedo`** — `@hshm/vuedo`, an embeddable **library** (not a
   service) that turns Vue+Tailwind templates into PDFs: Vue SSR → asset-inlined
   HTML → Gotenberg (headless Chromium). Consumers keep their own HTTP server and
-  routes; the library exposes `createPdfKit()` → `renderHtml()` / `generatePdf()`.
+  routes; the library exposes `createVuedo()` → `renderHtml()` / `generatePdf()`.
 - **root (`vuedo`)** — an example **consumer**: a plain Elysia backend that
   installs `@hshm/vuedo` (via `workspace:*`) and calls it from its own routes.
 
@@ -20,7 +20,7 @@ When in doubt, follow it.
 
 Three exports (see `docs/reference.md` §4):
 
-- **`@hshm/vuedo`** — `createPdfKit(options)` returning `{ renderHtml, renderComposite, generatePdf, close }`.
+- **`@hshm/vuedo`** — `createVuedo(options)` returning `{ renderHtml, renderComposite, generatePdf, close }`.
 - **`@hshm/vuedo/vite`** — a Vite plugin (`vuedo({ templatesDir, outDir })`):
   registers the host's dev server (tier 2) and, on `vite build`, compiles every
   template as an SSR entry, writes `pdf-manifest.json`, and emits the inferred
@@ -40,13 +40,13 @@ imports it.
    `configureServer` hook via `src/dev-registry.ts`.
 3. **owned** — the library lazily boots its own middleware-mode instance, once.
 
-Production takes none of this: `createPdfKit({ mode: 'production' })` reads the
+Production takes none of this: `createVuedo({ mode: 'production' })` reads the
 manifest and `import()`s the pre-compiled SSR module. No Vite involved.
 
 ## Library Layout (`packages/vuedo/src`)
 
 ```
-index.ts            createPdfKit() — the only required consumer import
+index.ts            createVuedo() — the only required consumer import
 renderer.ts         dev render strategy (3-tier Vite selection) + closeOwnedRenderer
 dev-registry.ts     module-level slot the plugin writes and the core reads
 discover.ts         file-based layout discovery (body + paired header/footer)
@@ -99,7 +99,7 @@ the template filenames (`packages/vuedo/src/discover.ts`):
 - A template name is its path with `/` → `.` (`pos/pos-order` → `pos.pos-order`).
 - An aux file whose base matches no body is an orphan (compiled but unused).
 
-`createPdfKit().generatePdf(name, data)` resolves the layout automatically and
+`createVuedo().generatePdf(name, data)` resolves the layout automatically and
 renders body + the paired header/footer. The `data` object carries each
 section's own props, so header/footer are never forced to share the body's data:
 
@@ -151,7 +151,7 @@ export type PdfTemplateProps = {
 Consumers pass it to the kit for full type-checking:
 
 ```ts
-const pdf = createPdfKit<PdfTemplateProps>({ templatesDir, gotenbergUrl });
+const pdf = createVuedo<PdfTemplateProps>({ templatesDir, gotenbergUrl });
 pdf.generatePdf("invoice", { header, body, footer, options }); // fully type-checked
 ```
 
@@ -188,7 +188,7 @@ props via Volar. The generated file is gitignored (`src/generated/`).
   options }` payload per template at the edge.
 - **Styling**: templates use Tailwind utility classes. `app.css` (`@import
   "tailwindcss";`) is compiled to `dist/app.css` by the `dev`/`build:css` scripts
-  and passed to `createPdfKit({ css })`, which `wrapHtml` injects into every
+  and passed to `createVuedo({ css })`, which `wrapHtml` injects into every
   rendered section. Custom fonts go in `assets/fonts/` and are referenced via
   `@font-face` in `app.css`; vuedo base64-inlines them at runtime.
 - All assets inline as Base64 (no runtime network fetches): imported images/fonts
@@ -202,7 +202,7 @@ props via Volar. The generated file is gitignored (`src/generated/`).
 
 - **Library** (`packages/vuedo/test`): `discover.test.ts` (recursive pairing +
   dotted names), `types.test.ts` (generated `PdfTemplateProps`), `dev.test.ts`
-  drives `createPdfKit` in development mode against a fixture `templatesDir`
+  drives `createVuedo` in development mode against a fixture `templatesDir`
   (tier-3 ssrLoadModule, incl. `renderComposite`); `manifest.prod.test.ts` runs
   the real build (`runBuild`) then renders via the manifest in production mode.
 - **Consumer** (root `test`): `app.test.ts` hits each typed Elysia route with

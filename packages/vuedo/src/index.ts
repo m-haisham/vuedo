@@ -12,7 +12,7 @@ import { wrapHtml } from "./html.js";
 import { inlineCssAssets, inlineHtmlAssets } from "./inline-assets.js";
 import type { Discovery } from "./discover.js";
 
-export interface PdfKitOptions {
+export interface VuedoOptions {
   /** Folder of `.vue` templates. Defaults to `<cwd>/templates`. */
   templatesDir?: string;
   gotenbergUrl: string;
@@ -44,8 +44,8 @@ export interface GeneratePdfOptions {
 // keys are present only when the template actually has those sections) so
 // `generatePdf(name, data)` is type-checked against exactly the sections that
 // exist:
-//   createPdfKit<PdfTemplateProps>({ ... })
-export interface PdfKit<
+//   createVuedo<PdfTemplateProps>({ ... })
+export interface Vuedo<
   Props extends Record<string, { body: any; options?: any }> = Record<
     string,
     { body: any }
@@ -69,12 +69,12 @@ export interface PdfKit<
 
 export { inlineCssAssets };
 
-export function createPdfKit<
+export function createVuedo<
   Props extends Record<string, { body: any; options?: any }> = Record<
     string,
     { body: any }
   >,
->(options: PdfKitOptions): PdfKit<Props> {
+>(options: VuedoOptions): Vuedo<Props> {
   const templatesDir = options.templatesDir ?? path.join(process.cwd(), "templates");
   const assetsDir = options.assetsDir ?? path.join(templatesDir, "..", "assets");
   const isDev =

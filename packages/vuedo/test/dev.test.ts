@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll } from "vitest";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createPdfKit } from "../src/index.js";
+import { createVuedo } from "../src/index.js";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const templatesDir = path.resolve(dir, "fixtures/templates");
@@ -9,7 +9,7 @@ const templatesDir = path.resolve(dir, "fixtures/templates");
 // Development mode with no explicit and no shared Vite server: exercises the
 // tier-3 fallback where vuedo lazily owns its own middleware-mode instance
 // and compiles the fixture template via ssrLoadModule — no build step.
-const kit = createPdfKit({
+const kit = createVuedo({
   templatesDir,
   gotenbergUrl: "http://unused.local",
   mode: "development",
@@ -17,7 +17,7 @@ const kit = createPdfKit({
 
 afterAll(() => kit.close());
 
-describe("createPdfKit — development (tier-3 owned Vite, ssrLoadModule)", () => {
+describe("createVuedo — development (tier-3 owned Vite, ssrLoadModule)", () => {
   it("SSR-renders a fixture body template with provided data", async () => {
     const html = await kit.renderHtml("Hello", { name: "Vuedf" });
     expect(html).toContain("Hello Vuedf");

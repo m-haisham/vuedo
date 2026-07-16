@@ -4,7 +4,7 @@
 
 This document specifies `@hshm/vuedo` — a library, not a service. Consumers keep their own HTTP server (Elysia, Express, Fastify, Hono, whatever) and their own routes. The package does the nitty-gritty — Vue SSR compilation of print templates, dev-mode live compilation with no build step, Gotenberg orchestration, layout-measurement caching — behind three small exports:
 
-- **`@hshm/vuedo`** — the core: `createPdfKit()`, returns `renderHtml()` / `generatePdf()`. Framework-agnostic; the consumer calls these from inside whatever route handler they already have.
+- **`@hshm/vuedo`** — the core: `createVuedo()`, returns `renderHtml()` / `generatePdf()`. Framework-agnostic; the consumer calls these from inside whatever route handler they already have.
 - **`@hshm/vuedo/vite`** — an optional Vite plugin. Auto-discovers template SSR entries for production builds and, if the host app already runs a Vite dev server, lets `vuedo` share it instead of spinning up a second one.
 - **`vuedo build`** — a CLI, for hosts with no Vite of their own (a plain Node/Elysia backend), that runs the same compile step standalone.
 
@@ -25,7 +25,7 @@ Dev-mode stays live with **no `vite build` in the loop**, same guarantee as befo
                               ▼
               ┌───────────────────────────────┐
               │   @hshm/vuedo (library)    │
-              │   createPdfKit({ ... })         │
+              │   createVuedo({ ... })         │
               │   • renderHtml()  — Vue → HTML  │
               │   • generatePdf() — + Gotenberg │
               └───────────────────────────────┘
@@ -54,7 +54,7 @@ Unchanged from the original spec: web technologies (flexbox, grid, reactive data
 
 **Decision:** Move Vite integration into `@hshm/vuedo/vite`, a standard Vite plugin with `configureServer` and `config` hooks, rather than having the library spin up its own Vite instance unconditionally.
 
-**Justification:** Many consumers already run a Vite dev server for their own frontend (a Nuxt app, a separate SPA, whatever). Forcing `vuedo` to always boot a second,独立 Vite instance wastes memory and, worse, can produce two different module graphs for the same `.vue` files if the host also imports them elsewhere. A plugin lets the host's *existing* Vite server double as the compiler `vuedo` uses — `configureServer` registers that running instance so `createPdfKit()` finds it instead of creating its own. Hosts with no Vite at all still get a working dev mode: the library falls back to an internally-owned instance (§4.3), so the plugin is an optimization, not a requirement — matching "can do a Vite plugin too if necessary."
+**Justification:** Many consumers already run a Vite dev server for their own frontend (a Nuxt app, a separate SPA, whatever). Forcing `vuedo` to always boot a second,独立 Vite instance wastes memory and, worse, can produce two different module graphs for the same `.vue` files if the host also imports them elsewhere. A plugin lets the host's *existing* Vite server double as the compiler `vuedo` uses — `configureServer` registers that running instance so `createVuedo()` finds it instead of creating its own. Hosts with no Vite at all still get a working dev mode: the library falls back to an internally-owned instance (§4.3), so the plugin is an optimization, not a requirement — matching "can do a Vite plugin too if necessary."
 
 ### 3.4 "Embed Everything" via Vite (unchanged)
 
@@ -67,7 +67,7 @@ Assets stay Base64-inlined into the SSR HTML string per the original spec — de
 ```
 @hshm/vuedo/
 ├── src/
-│   ├── index.ts          # createPdfKit() — the only required import for consumers
+│   ├── index.ts          # createVuedo() — the only required import for consumers
 │   ├── renderer.ts        # dev vs. prod render strategy (mirrors the old server.ts branch, §4.3)
 │   ├── dev-registry.ts     # module-level slot the Vite plugin writes into, core reads from
 │   ├── manifest.ts         # reads pdf-manifest.json written by the plugin/CLI at build time
@@ -101,7 +101,7 @@ Assets stay Base64-inlined into the SSR HTML string per the original spec — de
 
 ```ts
 // @hshm/vuedo
-export interface PdfKitOptions {
+export interface VuedoOptions {
   templatesDir: string;           // absolute path to the folder of .vue templates
   gotenbergUrl: string;
   redisUrl?: string;               // optional — enables layout-measurement caching
@@ -110,7 +110,7 @@ export interface PdfKitOptions {
   manifestPath?: string;           // default: '<templatesDir>/../dist/pdf-manifest.json'
 }
 
-export interface PdfKit<
+export interface Vuedo<
   Props extends Record<string, { body: any; options?: any }> = Record<string, { body: any }>,
 > {
   /** Vue SSR → wrapped, asset-inlined HTML string (body only). */
@@ -126,9 +126,9 @@ export interface PdfKit<
   close(): Promise<void>;
 }
 
-export function createPdfKit<
+export function createVuedo<
   Props extends Record<string, { body: any; options?: any }> = Record<string, { body: any }>,
->(options: PdfKitOptions): PdfKit<Props>;
+>(options: VuedoOptions): Vuedo<Props>;
 ```
 
 ### 4.3 Dev-Mode Rendering — Three Tiers, Same Live Guarantee
@@ -171,7 +171,7 @@ Tier 2 is what makes the plugin worth having: a host that already runs `vite dev
 
 ```ts
 // src/index.ts (excerpt)
-export function createPdfKit(options: PdfKitOptions): PdfKit {
+export function createVuedo(options: VuedoOptions): Vuedo {
   const isDev = (options.mode ?? (process.env.NODE_ENV === 'production' ? 'production' : 'development')) === 'development';
 
   async function getRender() {
@@ -243,7 +243,7 @@ aux, so the call is type-checked against exactly the sections that exist.
 Consumers pass it to the kit for type-checked calls:
 
 ```ts
-const vuedo = createPdfKit<PdfTemplateProps>({ templatesDir, gotenbergUrl });
+const vuedo = createVuedo<PdfTemplateProps>({ templatesDir, gotenbergUrl });
 vuedo.generatePdf("invoice", {
   header: { id, customerName },
   body: { id, customerName },
@@ -326,9 +326,9 @@ The whole point: the consumer's router is untouched by `vuedo`. Three different 
 ```ts
 // Elysia
 import { Elysia } from 'elysia';
-import { createPdfKit } from '@hshm/vuedo';
+import { createVuedo } from '@hshm/vuedo';
 
-const vuedo = createPdfKit({
+const vuedo = createVuedo({
   templatesDir: new URL('./templates', import.meta.url).pathname,
   gotenbergUrl: process.env.GOTENBERG_URL!,
 });
@@ -344,7 +344,7 @@ new Elysia()
 ```
 
 ```ts
-// Express — same createPdfKit() instance, different router
+// Express — same createVuedo() instance, different router
 app.get('/invoices/:id/pdf', async (req, res) => {
   const data = await getInvoiceData(req.params.id);
   res.setHeader('Content-Type', 'application/pdf');
@@ -362,7 +362,7 @@ app.get('/invoices/:id/pdf', async (c) => {
 });
 ```
 
-Live template editing (§4.3) works identically under all three — it's a property of `createPdfKit()`, not of the router.
+Live template editing (§4.3) works identically under all three — it's a property of `createVuedo()`, not of the router.
 
 ## 6. Infrastructure (Docker Compose)
 
@@ -390,5 +390,5 @@ A consumer's own `docker-compose.dev.yml` just bind-mounts their app source as u
 
 Two layers, since there are now two audiences: the library itself, and each consumer's usage of it.
 
-- **Library tests** (in `@hshm/vuedo`'s own repo): Vitest exercises `createPdfKit()` directly against a fixture `templatesDir`, in both `mode: 'development'` (asserting `ssrLoadModule` is used, tier 3 fallback) and `mode: 'production'` (asserting the manifest path is read and no `vite` import occurs — this is checked by running that test in a sandbox with `vite` uninstalled, proving the optional-peer-dependency claim in §4.1 actually holds).
+- **Library tests** (in `@hshm/vuedo`'s own repo): Vitest exercises `createVuedo()` directly against a fixture `templatesDir`, in both `mode: 'development'` (asserting `ssrLoadModule` is used, tier 3 fallback) and `mode: 'production'` (asserting the manifest path is read and no `vite` import occurs — this is checked by running that test in a sandbox with `vite` uninstalled, proving the optional-peer-dependency claim in §4.1 actually holds).
 - **Consumer tests**: `supertest`-style requests against the consumer's own router (Elysia/Express/Hono), asserting the route returns `Content-Type: application/pdf` and that `pdf-parse` can read the resulting buffer — no different from testing any other route in their app, since `vuedo` doesn't introduce a network hop to mock.

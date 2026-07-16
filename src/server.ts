@@ -2,13 +2,13 @@ import { Elysia, t } from "elysia";
 import { node } from "@elysiajs/node";
 import path from "node:path";
 import { readFileSync } from "node:fs";
-import { createPdfKit, inlineCssAssets } from "@hshm/vuedo";
+import { createVuedo, inlineCssAssets } from "@hshm/vuedo";
 import { swagger } from "@elysiajs/swagger";
 import type { PdfTemplateProps } from "./generated/pdf-templates";
 
 // This root package is a *consumer* of @hshm/vuedo — an ordinary Elysia
 // backend that owns its own routing. The library does the Vue SSR + Gotenberg
-// work behind createPdfKit(); layout (body + paired header/footer) is resolved
+// work behind createVuedo(); layout (body + paired header/footer) is resolved
 // by naming convention, and the generated PdfTemplateProps keeps each template's
 // data type-checked. Consumers expose one typed route per template (not a
 // generic public endpoint) so Elysia's TypeBox validation guards the body,
@@ -28,7 +28,7 @@ async function loadCss(): Promise<string> {
 
 const css = await loadCss();
 
-export const vuedo = createPdfKit<PdfTemplateProps>({
+export const vuedo = createVuedo<PdfTemplateProps>({
   templatesDir,
   gotenbergUrl: process.env.GOTENBERG_URL ?? "http://localhost:3000",
   css,

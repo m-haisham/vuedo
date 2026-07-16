@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runBuild } from "../src/cli.js";
-import { createPdfKit } from "../src/index.js";
+import { createVuedo } from "../src/index.js";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const templatesDir = path.resolve(dir, "fixtures/templates");
@@ -19,7 +19,7 @@ afterAll(async () => {
   // await fs.rm(outDir, { recursive: true, force: true });
 });
 
-describe("createPdfKit — production (manifest, compiled module)", () => {
+describe("createVuedo — production (manifest, compiled module)", () => {
   it("writes a pdf-manifest.json with entries + paired layouts", async () => {
     const manifest = JSON.parse(
       await fs.readFile(path.resolve(outDir, "pdf-manifest.json"), "utf8"),
@@ -34,7 +34,7 @@ describe("createPdfKit — production (manifest, compiled module)", () => {
   });
 
   it("renders a body + paired header from the manifest without a dev Vite", async () => {
-    const kit = createPdfKit({
+    const kit = createVuedo({
       templatesDir,
       gotenbergUrl: "http://unused.local",
       mode: "production",
