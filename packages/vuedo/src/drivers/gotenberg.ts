@@ -20,8 +20,8 @@ export class GotenbergDriver extends PdfDriver {
     if (input.footer) {
       form.append("files", new Blob([input.footer], { type: "text/html" }), "footer.html");
     }
-    form.append("marginTop", String(input.marginTop ?? 0.4));
-    form.append("marginBottom", String(input.marginBottom ?? 0.4));
+    form.append("marginTop", String(input.marginTop ?? 0));
+    form.append("marginBottom", String(input.marginBottom ?? 0));
     if (input.marginLeft !== undefined) form.append("marginLeft", String(input.marginLeft));
     if (input.marginRight !== undefined) form.append("marginRight", String(input.marginRight));
     form.append("paperWidth", String(input.paperWidth ?? 8.27));

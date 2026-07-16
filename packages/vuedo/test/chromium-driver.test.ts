@@ -76,7 +76,7 @@ describe("ChromiumDriver", () => {
       expect.objectContaining({
         printBackground: true,
         format: "A4",
-        marginTop: 0.4,
+        marginTop: 0,
       }),
     );
 

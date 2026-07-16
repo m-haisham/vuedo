@@ -72,7 +72,7 @@ export class ChromiumDriver extends PdfDriver {
     }
   }
 
-  private async getBrowser(): Promise<any> {
+  private async getBrowserInternal(): Promise<any> {
     if (this.browser) return this.browser;
     const puppeteer = await this.getPuppeteer();
     if (this.connected) {
@@ -91,9 +91,14 @@ export class ChromiumDriver extends PdfDriver {
     return this.browser;
   }
 
+  /** Returns the underlying Puppeteer Browser instance, creating it if needed. Used by PuppeteerMeasurer to compose without duplicating connection logic. */
+  async getBrowser(): Promise<any> {
+    return this.getBrowserInternal();
+  }
+
   async render(input: DriverRenderInput): Promise<ReadableStream> {
     const puppeteer = await this.getPuppeteer();
-    const browser = await this.getBrowser();
+    const browser = await this.getBrowserInternal();
     const page = await browser.newPage();
     try {
       await page.setContent(input.body, { waitUntil: "networkidle0" });
@@ -123,8 +128,8 @@ export class ChromiumDriver extends PdfDriver {
       const pdf: Uint8Array = await page.pdf({
         printBackground: input.backgroundGraphics ?? true,
         format: input.paperSize ?? "A4",
-        marginTop: input.marginTop ?? 0.4,
-        marginBottom: input.marginBottom ?? 0.4,
+        marginTop: input.marginTop ?? 0,
+        marginBottom: input.marginBottom ?? 0,
         marginLeft: input.marginLeft,
         marginRight: input.marginRight,
       });

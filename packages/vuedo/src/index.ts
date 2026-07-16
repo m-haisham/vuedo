@@ -11,7 +11,12 @@ import { wrapBody, wrapHeader, wrapFooter } from "./html.js";
 import { inlineCssAssets, inlineHtmlAssets } from "./inline-assets.js";
 import { TailwindCompiler, type TailwindOptions } from "./tailwind.js";
 import type { Discovery } from "./discover.js";
-import { type PdfDriver, GotenbergDriver } from "./drivers/index.js";
+import {
+  type PdfDriver,
+  GotenbergDriver,
+  type ChromiumMeasurer,
+  resolveMargins,
+} from "./drivers/index.js";
 
 export interface VuedoOptions {
   /** Folder of `.vue` templates. Defaults to `<cwd>/templates`. */
@@ -27,8 +32,12 @@ export interface VuedoOptions {
   gotenbergUrl?: string;
   /** Optional — enables layout-measurement caching (planned). */
   redisUrl?: string;
-  /** Optional — enables pre-flight DOM measurement (planned). */
-  browserlessUrl?: string;
+  /**
+   * The measurer to use for pre-flight DOM measurement of header/footer
+   * heights. When set, `generatePdf()` measures rendered banner heights and
+   * uses them as page margins automatically.
+   */
+  measurer?: ChromiumMeasurer;
   /** Defaults to NODE_ENV. */
   mode?: "development" | "production";
   /** Defaults to `<templatesDir>/../dist/pdf-manifest.json`. */
@@ -47,12 +56,18 @@ export interface VuedoOptions {
   assetsDir?: string;
 }
 
-/** Gotenberg page margins, sent as the `options` field of `generatePdf`. */
+/** Page geometry, sent as the `options` field of `generatePdf`. */
 export interface GeneratePdfOptions {
   marginTop?: number;
   marginBottom?: number;
   marginLeft?: number;
   marginRight?: number;
+  /** Paper width in inches. Defaults to A4 (8.27). Also sizes the measurement viewport. */
+  paperWidth?: number;
+  /** Paper height in inches. Defaults to A4 (11.69). */
+  paperHeight?: number;
+  /** Timeout in milliseconds for each header/footer measurement. Defaults to 3 000ms. */
+  measureTimeoutMs?: number;
 }
 
 // `Props` maps a template name to its full data object:
@@ -88,10 +103,18 @@ export interface Vuedo<
 }
 
 export { inlineCssAssets };
-export { PdfDriver, GotenbergDriver, ChromiumDriver } from "./drivers/index.js";
+export {
+  PdfDriver,
+  GotenbergDriver,
+  ChromiumDriver,
+  ChromiumMeasurer,
+  PuppeteerMeasurer,
+  resolveMargins,
+} from "./drivers/index.js";
 export type {
   DriverRenderInput,
   ChromiumDriverOptions,
+  MarginInput,
 } from "./drivers/index.js";
 
 export function createVuedo<
@@ -119,6 +142,11 @@ export function createVuedo<
               "(see @hshm/vuedo drivers), or set `gotenbergUrl` for the legacy shorthand.",
           );
         })());
+
+  // Resolve the measurer for pre-flight DOM measurement of header/footer
+  // heights. Optional — when present, `generatePdf()` measures rendered banner
+  // heights and uses them as page margins automatically.
+  const measurer = options.measurer;
 
   const isDev =
     (options.mode ??
@@ -242,14 +270,21 @@ export function createVuedo<
       layout.footer && data.footer !== undefined
         ? await renderOne(layout.footer, data.footer, "footer")
         : undefined;
+
+    const margins = await resolveMargins(
+      measurer,
+      data.options ?? {},
+      header,
+      footer,
+    );
+
     return driver.render({
       body,
       header,
       footer,
-      marginTop: data.options?.marginTop,
-      marginBottom: data.options?.marginBottom,
-      marginLeft: data.options?.marginLeft,
-      marginRight: data.options?.marginRight,
+      ...margins,
+      paperWidth: data.options?.paperWidth,
+      paperHeight: data.options?.paperHeight,
     });
   }
 
@@ -260,6 +295,7 @@ export function createVuedo<
     async close() {
       await closeOwnedRenderer();
       await driver.close();
+      await measurer?.close();
     },
   };
 }
