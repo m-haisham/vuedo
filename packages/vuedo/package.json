@@ -16,6 +16,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@tailwindcss/node": "^4.0.0",
+    "@tailwindcss/oxide": "^4.0.0",
+    "tailwindcss": "^4.0.0",
     "@vitejs/plugin-vue": "^5.0.0",
     "@vue/server-renderer": "^3.4.0",
     "vue": "^3.4.0",

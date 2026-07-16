@@ -60,6 +60,27 @@ Unchanged from the original spec: web technologies (flexbox, grid, reactive data
 
 Assets stay Base64-inlined into the SSR HTML string per the original spec — deterministic, no network fetch during Gotenberg conversion.
 
+### 3.5 Tailwind v4, Compiled by the Package
+
+**Decision:** `@hshm/vuedo` compiles Tailwind v4 itself. A consumer passes the
+path to their own CSS entry (their tunable `app.css`, which `@import
+"tailwindcss";`s and may declare `@theme` / `@source` directives) via the
+`tailwind` option, and the library produces the final stylesheet — scoped to the
+PDF templates and assets only.
+
+**Justification:** The original design forced every consumer to run a separate
+`tailwindcss` build step (`build:css` / `dev` watch scripts) and to install
+Tailwind in their own service. That is build-tooling the library can own
+transparently. The package bundles `tailwindcss` + `@tailwindcss/node`, so the
+consumer needs neither installed. Compilation scans only `templatesDir` and
+`assetsDir` (the package adds these globs automatically), so we capture *relevant*
+styles, not whatever the consumer's whole service happens to use; the consumer
+tunes scope further with `@source` / `@source not` in their entry. The result is
+inlined by `wrapBody`/`wrapHeader`/`wrapFooter` exactly like an explicit `css`
+string, and is cached across renders (invalidated on file change). A consumer who
+prefers to keep their own Tailwind build can still pass a precompiled `css`
+string instead.
+
 ## 4. Public API & Package Layout
 
 ### 4.1 Package Layout
@@ -113,6 +134,8 @@ export interface VuedoOptions {
   browserlessUrl?: string;         // optional — enables pre-flight DOM measurement
   mode?: 'development' | 'production';   // default: derived from NODE_ENV
   manifestPath?: string;           // default: '<templatesDir>/../dist/pdf-manifest.json'
+  css?: string;                    // optional — raw CSS inlined into every section
+  tailwind?: string | { entry: string; sources?: SourceEntry[] }; // optional — Tailwind v4 entry compiled by the package
 }
 
 // Abstract backend. Implement this to add a new render engine.

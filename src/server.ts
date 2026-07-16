@@ -1,8 +1,7 @@
 import { Elysia, t } from "elysia";
 import { node } from "@elysiajs/node";
 import path from "node:path";
-import { readFileSync } from "node:fs";
-import { createVuedo, inlineCssAssets, GotenbergDriver } from "@hshm/vuedo";
+import { createVuedo, GotenbergDriver } from "@hshm/vuedo";
 import { swagger } from "@elysiajs/swagger";
 import type { PdfTemplateProps } from "./generated/pdf-templates";
 
@@ -15,23 +14,15 @@ import type { PdfTemplateProps } from "./generated/pdf-templates";
 // header and footer data at the edge.
 const templatesDir = path.resolve("templates");
 
-// Tailwind is compiled to dist/app.css by the `build:css` / `dev` scripts.
-// vuedo base64-inlines any local font `url()` so the PDF needs no network.
-async function loadCss(): Promise<string> {
-  try {
-    const raw = readFileSync(path.resolve("dist/app.css"), "utf8");
-    return await inlineCssAssets(raw, process.cwd());
-  } catch {
-    return "";
-  }
-}
-
-const css = await loadCss();
+// Tailwind is compiled by the package itself from this entry (scoped to the
+// PDF templates + assets by default — the whole service needs no Tailwind build
+// step). The consumer tunes scan scope via `@source` in this file.
+const tailwindEntry = path.resolve("assets/app.css");
 
 export const vuedo = createVuedo<PdfTemplateProps>({
   templatesDir,
   driver: new GotenbergDriver(process.env.GOTENBERG_URL ?? "http://localhost:3000"),
-  css,
+  tailwind: tailwindEntry,
   manifestPath: path.resolve("dist/pdf-manifest.json"),
 });
 
