@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   running a Gotenberg instance. `puppeteer` is an optional peer dependency,
   imported lazily so Gotenberg-only consumers need not install it.
 
+- **vuedo:** Both drivers now enable **background graphics** (CSS backgrounds,
+  images) by default and default the **paper size to A4** (`paperWidth` 8.27 ×
+  `paperHeight` 11.69 inches for Gotenberg; `format: "A4"` for Chromium). Each
+  can be overridden per render via the new `paperWidth`/`paperHeight`/
+  `paperSize`/`backgroundGraphics` fields on `DriverRenderInput`.
+
 - Initial public structure: `@hshm/vuedo` library (`createPdfKit`, `renderHtml`,
   `renderComposite`, `generatePdf`) with Vue SSR → asset-inlined HTML → Gotenberg
   pipeline.

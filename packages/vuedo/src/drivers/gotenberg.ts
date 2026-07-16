@@ -24,6 +24,9 @@ export class GotenbergDriver extends PdfDriver {
     form.append("marginBottom", String(input.marginBottom ?? 0.4));
     if (input.marginLeft !== undefined) form.append("marginLeft", String(input.marginLeft));
     if (input.marginRight !== undefined) form.append("marginRight", String(input.marginRight));
+    form.append("paperWidth", String(input.paperWidth ?? 8.27));
+    form.append("paperHeight", String(input.paperHeight ?? 11.69));
+    form.append("backgroundGraphics", String(input.backgroundGraphics ?? true));
 
     const res = await fetch(`${this.baseUrl}/forms/chromium/convert/html`, {
       method: "POST",

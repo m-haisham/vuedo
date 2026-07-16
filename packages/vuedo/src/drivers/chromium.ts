@@ -121,7 +121,8 @@ export class ChromiumDriver extends PdfDriver {
       }
 
       const pdf: Uint8Array = await page.pdf({
-        printBackground: true,
+        printBackground: input.backgroundGraphics ?? true,
+        format: input.paperSize ?? "A4",
         marginTop: input.marginTop ?? 0.4,
         marginBottom: input.marginBottom ?? 0.4,
         marginLeft: input.marginLeft,

@@ -17,6 +17,12 @@ export interface DriverRenderInput {
   marginBottom?: number;
   marginLeft?: number;
   marginRight?: number;
+  /** Paper size. Gotenberg: width/height in inches. Chromium: a Puppeteer format (e.g. "A4"). Defaults to A4. */
+  paperWidth?: number;
+  paperHeight?: number;
+  paperSize?: string;
+  /** Print background graphics (CSS backgrounds, images). Defaults to true. */
+  backgroundGraphics?: boolean;
 }
 
 export abstract class PdfDriver {
