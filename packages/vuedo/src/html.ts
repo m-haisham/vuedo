@@ -29,16 +29,38 @@ export function wrapBody(content: string, css = ""): string {
  *     (e.g. a `<p>` default margin, box-sizing) that would otherwise push the
  *     header out of the visible band.
  *
+ * The base reset below additionally:
+ *  - Forces `box-sizing: border-box` + zeroed margin/padding on every element
+ *    so Tailwind's layout utilities (padding, borders, width) compute against
+ *    the full header box instead of the UA default content box.
+ *  - Pins a 16px base font-size so Tailwind `rem` units resolve to the expected
+ *    pixel values (Gotenberg/Chromium may otherwise report a different root
+ *    font-size, corrupting spacing/scale).
+ *  - Sets `-webkit-print-color-adjust/print-color-adjust: exact` so Tailwind
+ *    background/border colors survive headless-Chromium's print color stripping.
+ *  - Forces `header { width: 100% }` so the top-level container spans the full
+ *    page width rather than shrinking to its content.
+ *
  * The values below are conservative starting points; revisit after measuring
  * against a real Gotenberg run (see .context/todos.md).
  */
 export function wrapHeader(content: string, css = ""): string {
   const reset = `
     <style>
-      * { box-sizing: border-box !important; }
+      * {
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 16px !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
       html, body {
         margin: 0 !important;
         padding: 0 !important;
+      }
+      header {
+        width: 100% !important;
       }
       body {
         margin-top: -8mm !important; /* pull flush into the reserved header band */
@@ -53,15 +75,29 @@ export function wrapHeader(content: string, css = ""): string {
  * Footer: wrapped as its own standalone Gotenberg footer document.
  *
  * Mirrors `wrapHeader`'s pull-down tuning (negative margin into the reserved
- * footer band) without the extra top-gap handling the header needs.
+ * footer band) and the same base reset: Tailwind utilities need a predictable
+ * box model + 16px root font-size to resolve `rem` correctly, and
+ * print-color-adjust keeps background/border colors from being stripped by
+ * headless Chromium. `footer { width: 100% }` ensures the container spans the
+ * full page width.
  */
 export function wrapFooter(content: string, css = ""): string {
   const reset = `
     <style>
-      * { box-sizing: border-box !important; }
+      * {
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 16px !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
       html, body {
         margin: 0 !important;
         padding: 0 !important;
+      }
+      footer {
+        width: 100% !important;
       }
       body {
         margin-top: -4mm !important; /* pull flush into the reserved footer band */
