@@ -58,9 +58,11 @@ export async function runBuild(
   await fs.rm(configPath, { force: true });
 }
 
-function parseArgs(
-  argv: string[],
-): { templates?: string; out?: string; typesOut?: string } {
+function parseArgs(argv: string[]): {
+  templates?: string;
+  out?: string;
+  typesOut?: string;
+} {
   const args: { templates?: string; out?: string; typesOut?: string } = {};
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--templates") args.templates = argv[++i];
@@ -83,8 +85,7 @@ async function main(): Promise<void> {
 
   if (cmd === "types") {
     const typesOut =
-      args.typesOut ??
-      path.resolve(process.cwd(), "src/generated/pdf-templates.d.ts");
+      args.typesOut ?? path.resolve(process.cwd(), "src/generated/vuedo.d.ts");
     await generateTypes(templates, typesOut);
     return;
   }

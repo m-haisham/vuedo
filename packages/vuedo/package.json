@@ -3,15 +3,26 @@
   "version": "0.1.0",
   "description": "Vue SSR → PDF generation (Gotenberg or local Chromium) as an embeddable library",
   "type": "module",
-  "bin": { "vuedo": "./dist/cli.js" },
+  "bin": {
+    "vuedo": "./dist/cli.js"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-    "./vite": { "types": "./dist/vite-plugin.d.ts", "import": "./dist/vite-plugin.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./vite": {
+      "types": "./dist/vite-plugin.d.ts",
+      "import": "./dist/vite-plugin.js"
+    }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "dev": "tsc --watch",
     "build": "tsc",
     "test": "vitest run"
   },
@@ -29,8 +40,12 @@
     "puppeteer": "^23.0.0"
   },
   "peerDependenciesMeta": {
-    "vite": { "optional": true },
-    "puppeteer": { "optional": true }
+    "vite": {
+      "optional": true
+    },
+    "puppeteer": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
