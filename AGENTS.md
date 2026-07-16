@@ -31,14 +31,16 @@ Three exports (see `docs/reference.md` §4):
 `vite` is an **optional peer dependency** — production (manifest path) never
 imports it.
 
-## Dev-Mode Rendering — Three Tiers (§4.3)
+## Dev-Mode Rendering — Two Tiers (§4.3)
 
 `renderer.ts` picks a Vite instance per render call, in priority order:
 
-1. **explicit** — one passed by the caller (tests/advanced).
-2. **shared** — the host's own Vite server, registered by the plugin's
-   `configureServer` hook via `src/dev-registry.ts`.
-3. **owned** — the library lazily boots its own middleware-mode instance, once.
+1. **shared** — the host's own Vite server, registered by the plugin's
+   `configureServer` hook via `src/dev-registry.ts`. This is the path used when
+   the consumer runs `vite dev` (the root `pnpm dev` does this concurrently with
+   the Elysia server).
+2. **owned** — the library lazily boots its own middleware-mode instance, once,
+   for consumers that run no `vite dev` of their own.
 
 Production takes none of this: `createVuedo({ mode: 'production' })` reads the
 manifest and `import()`s the pre-compiled SSR module. No Vite involved.
@@ -47,7 +49,7 @@ manifest and `import()`s the pre-compiled SSR module. No Vite involved.
 
 ```
 index.ts            createVuedo() — the only required consumer import
-renderer.ts         dev render strategy (3-tier Vite selection) + closeOwnedRenderer
+renderer.ts         dev render strategy (2-tier Vite selection) + closeOwnedRenderer
 dev-registry.ts     module-level slot the plugin writes and the core reads
 discover.ts         file-based layout discovery (body + paired header/footer)
 manifest.ts         writeManifest / loadManifest (entries + layouts)
@@ -119,7 +121,7 @@ key from `data` (and from the generated type) — see "Type Generation".
 ## Type Generation
 
 On every `vite build` (and via `vuedo types`), the library writes
-`src/generated/pdf-templates.d.ts` mapping each template name to the **exact**
+`src/generated/vuedo.d.ts` mapping each template name to the **exact**
 `generatePdf` data shape. `header`/`footer` keys are present **only** when the
 template actually has a paired aux, so the call is type-checked against exactly
 the sections that exist:
@@ -164,12 +166,15 @@ props via Volar. The generated file is gitignored (`src/generated/`).
 - `pnpm install` — install all workspace deps
 - `pnpm --filter @hshm/vuedo build` — compile the library to `packages/vuedo/dist`
   (**do this first** — the root service and its Vite config import the built lib)
-- `pnpm dev` (root) — dev server on `:8080` (normal Elysia `app.listen`);
-  templates hot-compile via the library's tier-3 owned Vite, **no vite build
-  step**, and Tailwind is compiled by the package from `assets/app.css` at
-  render time (no separate Tailwind/watch script)
+- `pnpm dev` (root) — runs `vite dev` (`:5173`, Path A) **and** the Elysia
+  server (`:8080`) concurrently. The `@hshm/vuedo/vite` plugin's `configureServer`
+  fires in the Vite process, so vuedo shares that Vite instance (tier 2) for
+  template hot-compile **and** emits/watches `src/generated/vuedo.d.ts`. Tailwind
+  is compiled by the package from `assets/app.css` at render time (no separate
+  Tailwind/watch script). Consumers with no `vite dev` at all fall back to
+  vuedo's tier-3 owned Vite and still get the generated types at startup.
 - `pnpm build` (root) — `vite build` with the `vuedo` plugin → `dist/` +
-  `pdf-manifest.json` + `src/generated/pdf-templates.d.ts`; Tailwind is compiled
+  `pdf-manifest.json` + `src/generated/vuedo.d.ts`; Tailwind is compiled
   by the package at runtime from `assets/app.css` (no `build:css` step)
 - `pnpm start` (root) — `NODE_ENV=production` server, reads the manifest
 - `pnpm typecheck` (root) — `vue-tsc --noEmit` (validates generated props)

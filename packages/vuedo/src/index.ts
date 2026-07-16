@@ -11,10 +11,7 @@ import { wrapBody, wrapHeader, wrapFooter } from "./html.js";
 import { inlineCssAssets, inlineHtmlAssets } from "./inline-assets.js";
 import { TailwindCompiler, type TailwindOptions } from "./tailwind.js";
 import type { Discovery } from "./discover.js";
-import {
-  type PdfDriver,
-  GotenbergDriver,
-} from "./drivers/index.js";
+import { type PdfDriver, GotenbergDriver } from "./drivers/index.js";
 
 export interface VuedoOptions {
   /** Folder of `.vue` templates. Defaults to `<cwd>/templates`. */
@@ -82,14 +79,20 @@ export interface Vuedo<
     data: Props[T],
   ): Promise<string>;
   /** renderComposite() + Gotenberg conversion. Returns a ReadableStream of PDF bytes. */
-  generatePdf<T extends keyof Props>(template: T, data: Props[T]): Promise<ReadableStream>;
+  generatePdf<T extends keyof Props>(
+    template: T,
+    data: Props[T],
+  ): Promise<ReadableStream>;
   /** Closes any internally-owned Vite instance / Redis connection. */
   close(): Promise<void>;
 }
 
 export { inlineCssAssets };
 export { PdfDriver, GotenbergDriver, ChromiumDriver } from "./drivers/index.js";
-export type { DriverRenderInput, ChromiumDriverOptions } from "./drivers/index.js";
+export type {
+  DriverRenderInput,
+  ChromiumDriverOptions,
+} from "./drivers/index.js";
 
 export function createVuedo<
   Props extends Record<string, { body: any; options?: any }> = Record<
@@ -97,8 +100,10 @@ export function createVuedo<
     { body: any }
   >,
 >(options: VuedoOptions): Vuedo<Props> {
-  const templatesDir = options.templatesDir ?? path.join(process.cwd(), "templates");
-  const assetsDir = options.assetsDir ?? path.join(templatesDir, "..", "assets");
+  const templatesDir =
+    options.templatesDir ?? path.join(process.cwd(), "templates");
+  const assetsDir =
+    options.assetsDir ?? path.join(templatesDir, "..", "assets");
 
   // Resolve the render driver. A caller must supply either `driver` or the
   // legacy `gotenbergUrl` shorthand. We do NOT silently default to an engine —
@@ -223,7 +228,10 @@ export function createVuedo<
     return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${sections}</body></html>`;
   }
 
-  async function generatePdf(template: any, data: any): Promise<ReadableStream> {
+  async function generatePdf(
+    template: any,
+    data: any,
+  ): Promise<ReadableStream> {
     const layout = await layoutOf(template);
     const body = await renderOne(template, data.body);
     const header =

@@ -16,7 +16,7 @@ describe("generateTypes — inferred PdfTemplateProps", () => {
       path.join(dir, "Invoice.vue"),
       "<template><div>{{ id }}</div></template>\n<script setup>defineProps<{ id: string }>();</script>",
     );
-    out = path.join(dir, "generated", "pdf-templates.d.ts");
+    out = path.join(dir, "generated", "vuedo.d.ts");
     await generateTypes(dir, out);
 
     const content = await fs.readFile(out, "utf-8");

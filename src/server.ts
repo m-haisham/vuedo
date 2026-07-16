@@ -3,7 +3,7 @@ import { node } from "@elysiajs/node";
 import path from "node:path";
 import { createVuedo, GotenbergDriver } from "@hshm/vuedo";
 import { openapi } from "@elysiajs/openapi";
-import type { PdfTemplateProps } from "./generated/pdf-templates";
+import type { PdfTemplateProps } from "./generated/vuedo";
 
 // This root package is a *consumer* of @hshm/vuedo — an ordinary Elysia
 // backend that owns its own routing. The library does the Vue SSR + Gotenberg

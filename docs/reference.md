@@ -8,7 +8,7 @@ This document specifies `@hshm/vuedo` — a library, not a service. Consumers ke
 - **`@hshm/vuedo/vite`** — an optional Vite plugin. Auto-discovers template SSR entries for production builds and, if the host app already runs a Vite dev server, lets `vuedo` share it instead of spinning up a second one.
 - **`vuedo build`** — a CLI, for hosts with no Vite of their own (a plain Node/Elysia backend), that runs the same compile step standalone.
 
-Dev-mode stays live with **no `vite build` in the loop**, same guarantee as before — the difference is that the library, not a bespoke `server.ts`, now owns the decision of *how* to get a running Vite instance, and it has three ways to do that in priority order (§4.3).
+Dev-mode stays live with **no `vite build` in the loop**, same guarantee as before — the difference is that the library, not a bespoke `server.ts`, now owns the decision of *how* to get a running Vite instance, and it has two ways to do that in priority order (§4.3).
 
 ## 2. System Architecture
 
@@ -180,7 +180,7 @@ export function createVuedo<
 >(options: VuedoOptions): Vuedo<Props>;
 ```
 
-### 4.3 Dev-Mode Rendering — Three Tiers, Same Live Guarantee
+### 4.3 Dev-Mode Rendering — Two Tiers, Same Live Guarantee
 
 `renderer.ts` picks a Vite instance in priority order, every time `renderHtml()`/`generatePdf()` is called in dev mode:
 
@@ -191,14 +191,13 @@ import { getSharedDevServer } from './dev-registry';
 
 let ownedVite: ViteDevServer | undefined;
 
-export async function getDevRenderer(templatesDir: string, explicitVite?: ViteDevServer) {
+export async function getDevRenderer(templatesDir: string) {
   const vite =
-    explicitVite ??                       // 1. caller passed one explicitly (tests, advanced setups)
-    getSharedDevServer() ??                // 2. the host's own Vite server, via the plugin's configureServer hook
+    getSharedDevServer() ??                // 1. the host's own Vite server, via the plugin's configureServer hook
     (ownedVite ??= await (await import('vite')).createServer({
       server: { middlewareMode: true },
       appType: 'custom',
-    }));                                   // 3. fallback — vuedo spins up its own, lazily, once
+    }));                                   // 2. fallback — vuedo spins up its own, lazily, once
 
   return async (template: string, data: unknown) => {
     const mod = await vite.ssrLoadModule(`${templatesDir}/${template}.vue`);
@@ -216,7 +215,7 @@ export function registerDevServer(server: ViteDevServer) { shared = server; }
 export function getSharedDevServer() { return shared; }
 ```
 
-Tier 2 is what makes the plugin worth having: a host that already runs `vite dev` for a Nuxt/Vue frontend gets `vuedo` templates hot-compiling through that *same* process — one Vite instance, one module graph, zero extra memory. Tier 3 is what makes the plugin *optional*: a plain Elysia-only backend with no Vite of its own still gets live template compilation, just via a small dedicated instance `vuedo` manages itself.
+Tier 1 (shared) is what makes the plugin worth having: a host that already runs `vite dev` for a Nuxt/Vue frontend gets `vuedo` templates hot-compiling through that *same* process — one Vite instance, one module graph, zero extra memory. Tier 2 (owned) is what makes the plugin *optional*: a plain Elysia-only backend with no Vite of its own still gets live template compilation, just via a small dedicated instance `vuedo` manages itself.
 
 ```ts
 // src/index.ts (excerpt)
@@ -331,7 +330,7 @@ export function vuedo(opts: { templatesDir: string; outDir?: string }): Plugin {
   return {
     name: 'origami-vuedo',
     configureServer(server) {
-      registerDevServer(server);   // §4.3 tier 2
+      registerDevServer(server);   // §4.3 tier 1 (shared)
     },
     async config(_config, { command }) {
       if (command !== 'build') return;
@@ -437,11 +436,11 @@ services:
     ports: ["6379:6379"]
 ```
 
-A consumer's own `docker-compose.dev.yml` just bind-mounts their app source as usual — `vuedo`'s dev-mode Vite fallback (§4.3, tier 3) needs no extra container or port of its own.
+A consumer's own `docker-compose.dev.yml` just bind-mounts their app source as usual — `vuedo`'s dev-mode Vite fallback (§4.3, tier 2) needs no extra container or port of its own.
 
 ## 7. End-to-End Testing Strategy
 
 Two layers, since there are now two audiences: the library itself, and each consumer's usage of it.
 
-- **Library tests** (in `@hshm/vuedo`'s own repo): Vitest exercises `createVuedo()` directly against a fixture `templatesDir`, in both `mode: 'development'` (asserting `ssrLoadModule` is used, tier 3 fallback) and `mode: 'production'` (asserting the manifest path is read and no `vite` import occurs — this is checked by running that test in a sandbox with `vite` uninstalled, proving the optional-peer-dependency claim in §4.1 actually holds).
+- **Library tests** (in `@hshm/vuedo`'s own repo): Vitest exercises `createVuedo()` directly against a fixture `templatesDir`, in both `mode: 'development'` (asserting `ssrLoadModule` is used, tier 2 fallback) and `mode: 'production'` (asserting the manifest path is read and no `vite` import occurs — this is checked by running that test in a sandbox with `vite` uninstalled, proving the optional-peer-dependency claim in §4.1 actually holds).
 - **Consumer tests**: `supertest`-style requests against the consumer's own router (Elysia/Express/Hono), asserting the route returns `Content-Type: application/pdf` and that `pdf-parse` can read the resulting buffer — no different from testing any other route in their app, since `vuedo` doesn't introduce a network hop to mock.
