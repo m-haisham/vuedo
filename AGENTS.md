@@ -174,6 +174,32 @@ props via Volar. The generated file is gitignored (`src/generated/`).
 - `pnpm typecheck` (root) — `vue-tsc --noEmit` (validates generated props)
 - `pnpm -r test` — run both suites (library + consumer)
 
+## Changelog (`CHANGELOG.md`)
+
+This repo keeps a `CHANGELOG.md` in the
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. **You must keep
+it up to date** whenever you change user-facing behavior.
+
+Rules:
+
+- **One `[Unreleased]` section at the top** under which every change lands, until
+  a release is cut. Never write directly under a version heading during dev.
+- Group entries under these headings only: `Added`, `Changed`, `Deprecated`,
+  `Removed`, `Fixed`, `Security`. Use sentence case, and describe the change from
+  the user's/consumer's perspective (not implementation trivia).
+- Every entry is a succinct bullet. Prefix with a package/scope where useful
+  (e.g. `**vuedo:**`, `**docs:**`, `**server:**`). Reference PRs/issues as
+  `(#123)` where known.
+- When a release is cut, rename `[Unreleased]` to the new semver version
+  (e.g. `## [1.2.0] - 2026-07-16`), add a comparison link at the bottom
+  (`[1.2.0]: https://github.com/hshm/vuedo/compare/v1.1.0...v1.2.0`), and open a
+  fresh `[Unreleased]` section. Keep versions ordered newest-first.
+- Link the top `[Unreleased]` to the commit stream
+  (`[Unreleased]: https://github.com/hshm/vuedo/commits/main`).
+- Treat the changelog as a record of **notable** changes: new features, breaking
+  changes, bug fixes, deprecations, removals, and security fixes. Do not log
+  internal refactors, formatting, or test-only changes.
+
 ## Conventions
 
 - The per-template prop types are **inferred** from the SFCs — do **not** maintain
