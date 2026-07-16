@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **vuedo:** Tailwind v4 is now compiled by the package itself. Pass
+  `tailwind: "<path-to-app.css>"` to `createVuedo` and the library scans only the
+  PDF templates + assets (not the whole consumer service) and inlines the result
+  into every rendered section — no standalone Tailwind build step needed. The
+  consumer tunes scan scope via `@source` in their own entry CSS.
+
 ### Changed
 
 - **vuedo:** Split HTML wrapping into per-section `wrapBody`, `wrapHeader`, and

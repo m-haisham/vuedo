@@ -9,6 +9,7 @@ import { loadManifest, type PdfManifest } from "./manifest.js";
 import { renderComponent } from "./render-component.js";
 import { wrapBody, wrapHeader, wrapFooter } from "./html.js";
 import { inlineCssAssets, inlineHtmlAssets } from "./inline-assets.js";
+import { TailwindCompiler, type TailwindOptions } from "./tailwind.js";
 import type { Discovery } from "./discover.js";
 import {
   type PdfDriver,
@@ -37,6 +38,14 @@ export interface VuedoOptions {
   manifestPath?: string;
   /** Optional CSS inlined into every wrapped document. */
   css?: string;
+  /**
+   * Optional Tailwind v4 entry (e.g. `assets/app.css`). When given, the package
+   * compiles it itself — scanning only the PDF templates and assets so the
+   * whole consumer service doesn't need its own Tailwind build step. The user
+   * tunes scan scope via `@source` in their entry. Mutually exclusive with
+   * `css`; `tailwind` wins when both are present.
+   */
+  tailwind?: string | TailwindOptions;
   /** Folder of static assets (images/fonts) inlined as Base64. Defaults to `<templatesDir>/../assets`. */
   assetsDir?: string;
 }
@@ -119,6 +128,27 @@ export function createVuedo<
   let devDiscovery: Discovery | undefined;
   let prodManifest: PdfManifest | undefined;
 
+  // Tailwind: when the consumer opts in, the package owns compilation. We
+  // lazily build a single compiler scoped to this templatesDir/assetsDir so the
+  // cache persists across renders.
+  const twOptions = options.tailwind;
+  const twCompiler =
+    twOptions === undefined
+      ? undefined
+      : new TailwindCompiler(
+          typeof twOptions === "string" ? twOptions : twOptions.entry,
+          templatesDir,
+          assetsDir,
+          typeof twOptions === "string" ? undefined : twOptions.sources,
+        );
+
+  // Resolves the CSS to inline: an explicit `css` string, a `tailwind` entry
+  // compiled by the package, or empty. `tailwind` takes precedence.
+  async function resolveCss(): Promise<string> {
+    if (twCompiler) return twCompiler.compile();
+    return options.css ?? "";
+  }
+
   async function ensureDev(): Promise<void> {
     if (!devRender) {
       const r = await getDevRenderer(templatesDir);
@@ -164,9 +194,10 @@ export function createVuedo<
     // Base64 so Gotenberg needs no network. Prod builds already inline via the
     // Vite plugin, so this is mostly a no-op there.
     const inlined = await inlineHtmlAssets(inner, assetsDir);
-    if (section === "header") return wrapHeader(inlined, options.css);
-    if (section === "footer") return wrapFooter(inlined, options.css);
-    return wrapBody(inlined, options.css);
+    const css = await resolveCss();
+    if (section === "header") return wrapHeader(inlined, css);
+    if (section === "footer") return wrapFooter(inlined, css);
+    return wrapBody(inlined, css);
   }
 
   async function renderHtml(template: any, data: any): Promise<string> {

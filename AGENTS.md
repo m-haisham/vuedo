@@ -70,7 +70,7 @@ templates/         Vue SFCs — the PDF templates (file-based layout convention,
   pos/pos-order.vue   nested body
   pos/pos-header.vue  header (auto-pairs with pos.pos-order via folder convention)
 assets/            static assets referenced by templates (images + fonts, base64-inlined)
-  app.css           Tailwind v4 entry (compiled to dist/app.css by the build/dev scripts)
+  app.css           Tailwind v4 entry — compiled by @hshm/vuedo itself (no build step in the service)
   logo.png
   fonts/            custom .woff2/.ttf files (referenced from app.css @font-face)
 src/
@@ -164,12 +164,13 @@ props via Volar. The generated file is gitignored (`src/generated/`).
 - `pnpm install` — install all workspace deps
 - `pnpm --filter @hshm/vuedo build` — compile the library to `packages/vuedo/dist`
   (**do this first** — the root service and its Vite config import the built lib)
-- `pnpm dev` (root) — dev server on `:8080` (normal Elysia `app.listen`) plus a
-  Tailwind CLI `--watch` (via `concurrently`) compiling `app.css` → `dist/app.css`;
-  templates hot-compile via the library's tier-3 owned Vite, **no vite build step**
+- `pnpm dev` (root) — dev server on `:8080` (normal Elysia `app.listen`);
+  templates hot-compile via the library's tier-3 owned Vite, **no vite build
+  step**, and Tailwind is compiled by the package from `assets/app.css` at
+  render time (no separate Tailwind/watch script)
 - `pnpm build` (root) — `vite build` with the `vuedo` plugin → `dist/` +
-  `pdf-manifest.json` + `src/generated/pdf-templates.d.ts`, then `build:css`
-  compiles Tailwind `app.css` → `dist/app.css`
+  `pdf-manifest.json` + `src/generated/pdf-templates.d.ts`; Tailwind is compiled
+  by the package at runtime from `assets/app.css` (no `build:css` step)
 - `pnpm start` (root) — `NODE_ENV=production` server, reads the manifest
 - `pnpm typecheck` (root) — `vue-tsc --noEmit` (validates generated props)
 - `pnpm -r test` — run both suites (library + consumer)
@@ -213,10 +214,14 @@ Rules:
   single generic public endpoint — TypeBox validates the `{ header?, body, footer?,
   options }` payload per template at the edge.
 - **Styling**: templates use Tailwind utility classes. `app.css` (`@import
-  "tailwindcss";`) is compiled to `dist/app.css` by the `dev`/`build:css` scripts
-  and passed to `createVuedo({ css })`, which `wrapHtml` injects into every
-  rendered section. Custom fonts go in `assets/fonts/` and are referenced via
-  `@font-face` in `app.css`; vuedo base64-inlines them at runtime.
+  "tailwindcss";`) is compiled by the package itself when the service passes
+  `createVuedo({ tailwind: "<path-to-app.css>" })` — `tailwind.ts` scans only the
+  templates + assets (so relevant styles are captured, not the whole service; the
+  consumer tunes via `@source`), and the result is injected into every rendered
+  section by `wrapBody`/`wrapHeader`/`wrapFooter`. No `dist/app.css` build step.
+  Consumers who prefer their own Tailwind build can still pass a precompiled `css`
+  string. Custom fonts go in `assets/fonts/` and are referenced via `@font-face`
+  in `app.css`; vuedo base64-inlines them at runtime.
 - All assets inline as Base64 (no runtime network fetches): imported images/fonts
   in templates are inlined by the library's `inlineAssetsPlugin` (dev + prod), and
   local `url()` refs in `app.css` are inlined by `inlineCssAssets` before injection.
