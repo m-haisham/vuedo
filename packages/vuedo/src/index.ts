@@ -17,6 +17,7 @@ import {
   type ChromiumMeasurer,
   resolveMargins,
 } from "./drivers/index.js";
+import { Cache, NoopCache } from "./cache/index.js";
 
 export interface VuedoOptions {
   /** Folder of `.vue` templates. Defaults to `<cwd>/templates`. */
@@ -54,6 +55,12 @@ export interface VuedoOptions {
   tailwind?: string | TailwindOptions;
   /** Folder of static assets (images/fonts) inlined as Base64. Defaults to `<templatesDir>/../assets`. */
   assetsDir?: string;
+  /**
+   * Optional cache backend for memoizing expensive operations (SSR renders,
+   * Tailwind compilation, etc.). Defaults to `NoopCache` (no caching).
+   * Pass `new InMemoryCache()` or `new RedisCache(client)` to enable.
+   */
+  cache?: Cache;
 }
 
 /** Page geometry, sent as the `options` field of `generatePdf`. */
@@ -116,6 +123,8 @@ export type {
   ChromiumDriverOptions,
   MarginInput,
 } from "./drivers/index.js";
+export { Cache, NoopCache, InMemoryCache, RedisCache } from "./cache/index.js";
+export type { RedisClient } from "./cache/index.js";
 
 export function createVuedo<
   Props extends Record<string, { body: any; options?: any }> = Record<
@@ -147,6 +156,10 @@ export function createVuedo<
   // heights. Optional — when present, `generatePdf()` measures rendered banner
   // heights and uses them as page margins automatically.
   const measurer = options.measurer;
+
+  // Cache backend — defaults to a no-op so consumers pay no cost unless they
+  // explicitly opt in.
+  const cache: Cache = options.cache ?? new NoopCache();
 
   const isDev =
     (options.mode ??

@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **vuedo:** Abstract `Cache` class with three implementations — `NoopCache`
+  (default, no-op), `InMemoryCache` (in-process `Map` with TTL), and `RedisCache`
+  (any Redis client implementing `get`/`set`/`del`). Each entry accepts a
+  per-operation TTL (default 1 hour). The cache backend is injected via
+  `createVuedo({ cache: new InMemoryCache() })`.
 - **vuedo:** The inferred `PdfTemplateProps` types file is now generated in dev
   mode by the `@hshm/vuedo/vite` plugin's `configureServer` hook (on dev start)
   and kept in sync via a file watcher as templates are edited — so consumers get
