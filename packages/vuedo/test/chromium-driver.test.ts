@@ -73,7 +73,11 @@ describe("ChromiumDriver", () => {
     // No header/footer => no injection
     expect(pageEvaluate).not.toHaveBeenCalled();
     expect(pagePdf).toHaveBeenCalledWith(
-      expect.objectContaining({ printBackground: true, marginTop: 0.4 }),
+      expect.objectContaining({
+        printBackground: true,
+        format: "A4",
+        marginTop: 0.4,
+      }),
     );
 
     const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
