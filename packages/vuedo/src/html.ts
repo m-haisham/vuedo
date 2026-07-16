@@ -48,13 +48,8 @@ export function wrapHeader(content: string, css = ""): string {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
-      html, body {
-        margin: 0 !important;
-        padding: 0 !important;
-      }
       header {
         width: 100% !important;
-        padding-top: 0 !important; /* neutralize Chromium's default 15pt header padding */
       }
       #header {
         padding-top: 0 !important;
@@ -84,13 +79,8 @@ export function wrapFooter(content: string, css = ""): string {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
-      html, body {
-        margin: 0 !important;
-        padding: 0 !important;
-      }
       footer {
         width: 100% !important;
-        padding-bottom: 0 !important; /* neutralize Chromium's default 15pt footer padding */
       }
       #footer {
         padding-bottom: 0 !important;
