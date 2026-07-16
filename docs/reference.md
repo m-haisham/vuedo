@@ -71,7 +71,11 @@ Assets stay Base64-inlined into the SSR HTML string per the original spec — de
 │   ├── renderer.ts        # dev vs. prod render strategy (mirrors the old server.ts branch, §4.3)
 │   ├── dev-registry.ts     # module-level slot the Vite plugin writes into, core reads from
 │   ├── manifest.ts         # reads pdf-manifest.json written by the plugin/CLI at build time
-│   ├── gotenberg.ts        # Gotenberg HTTP client
+│   ├── drivers/            # pluggable PDF backends (the only thing that touches Chromium)
+│   │   ├── types.ts         # PdfDriver abstract class + DriverRenderInput
+│   │   ├── gotenberg.ts     # GotenbergDriver — remote Chromium service
+│   │   ├── chromium.ts      # ChromiumDriver — local Puppeteer
+│   │   └── index.ts         # re-exports
 │   ├── vite-plugin.ts      # exported as '@hshm/vuedo/vite'
 │   └── cli.ts              # exported as bin `vuedo`
 ├── package.json             # exports map below
@@ -103,11 +107,26 @@ Assets stay Base64-inlined into the SSR HTML string per the original spec — de
 // @hshm/vuedo
 export interface VuedoOptions {
   templatesDir: string;           // absolute path to the folder of .vue templates
-  gotenbergUrl: string;
+  driver: PdfDriver;              // required — the PDF backend (GotenbergDriver | ChromiumDriver)
+  gotenbergUrl?: string;          // legacy shorthand: driver = new GotenbergDriver(url)
   redisUrl?: string;               // optional — enables layout-measurement caching
   browserlessUrl?: string;         // optional — enables pre-flight DOM measurement
   mode?: 'development' | 'production';   // default: derived from NODE_ENV
   manifestPath?: string;           // default: '<templatesDir>/../dist/pdf-manifest.json'
+}
+
+// Abstract backend. Implement this to add a new render engine.
+export abstract class PdfDriver {
+  abstract readonly name: string;
+  abstract render(input: DriverRenderInput): Promise<ReadableStream>;
+  async close(): Promise<void> {}
+}
+
+export class GotenbergDriver extends PdfDriver {        // remote Chromium service
+  constructor(baseUrl: string);
+}
+export class ChromiumDriver extends PdfDriver {         // local Puppeteer
+  constructor(options?: ChromiumDriverOptions);
 }
 
 export interface Vuedo<
@@ -119,10 +138,10 @@ export interface Vuedo<
   /** Body + paired header/footer composed into one HTML document. */
   renderComposite<T extends keyof Props>(template: T, data: Props[T]): Promise<string>;
 
-  /** renderComposite() + Gotenberg conversion. Returns a ReadableStream of PDF bytes. */
+  /** renderComposite() + driver.render(). Returns a ReadableStream of PDF bytes. */
   generatePdf<T extends keyof Props>(template: T, data: Props[T]): Promise<ReadableStream>;
 
-  /** Closes any internally-owned Vite instance / Redis connection. Call on shutdown. */
+  /** Closes any internally-owned Vite instance / driver. Call on shutdown. */
   close(): Promise<void>;
 }
 
@@ -195,7 +214,7 @@ export function createVuedo(options: VuedoOptions): Vuedo {
       const body = await this.renderHtml(template, data.body);
       const header = layout.header ? await renderOne(layout.header, data.header) : undefined;
       const footer = layout.footer ? await renderOne(layout.footer, data.footer) : undefined;
-      return sendToGotenberg(options.gotenbergUrl, {
+      return options.driver.render({
         body,
         header,
         footer,
@@ -203,7 +222,7 @@ export function createVuedo(options: VuedoOptions): Vuedo {
         marginBottom: data.options?.marginBottom,
       });
     },
-    async close() { /* shuts down any owned Vite instance / redis client */ },
+    async close() { /* shuts down any owned Vite instance / driver */ },
   };
 }
 ```
@@ -243,7 +262,7 @@ aux, so the call is type-checked against exactly the sections that exist.
 Consumers pass it to the kit for type-checked calls:
 
 ```ts
-const vuedo = createVuedo<PdfTemplateProps>({ templatesDir, gotenbergUrl });
+const vuedo = createVuedo<PdfTemplateProps>({ templatesDir, driver: new GotenbergDriver(url) });
 vuedo.generatePdf("invoice", {
   header: { id, customerName },
   body: { id, customerName },
@@ -326,11 +345,12 @@ The whole point: the consumer's router is untouched by `vuedo`. Three different 
 ```ts
 // Elysia
 import { Elysia } from 'elysia';
-import { createVuedo } from '@hshm/vuedo';
+import { createVuedo, GotenbergDriver } from '@hshm/vuedo';
 
 const vuedo = createVuedo({
   templatesDir: new URL('./templates', import.meta.url).pathname,
-  gotenbergUrl: process.env.GOTENBERG_URL!,
+  driver: new GotenbergDriver(process.env.GOTENBERG_URL!),
+  // or: driver: new ChromiumDriver()  // local Puppeteer, no separate service
 });
 
 new Elysia()

@@ -16,6 +16,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **vuedo:** Pluggable PDF render drivers behind an abstract `PdfDriver` interface.
+  Built-in `GotenbergDriver` (remote Chromium service) and `ChromiumDriver`
+  (local Puppeteer) — implement `PdfDriver` to add new backends (e.g. a cloud
+  render API) without touching core.
+- **vuedo:** `createVuedo` now requires an explicit `driver` (or legacy
+  `gotenbergUrl` shorthand); it no longer silently assumes Gotenberg. Exports
+  `PdfDriver`, `GotenbergDriver`, and `ChromiumDriver`.
+
+### Changed
+
+- **vuedo:** `ChromiumDriver` is now the recommended default backend (local
+  Puppeteer, no separate service); `GotenbergDriver` remains available for those
+  running a Gotenberg instance. `puppeteer` is an optional peer dependency,
+  imported lazily so Gotenberg-only consumers need not install it.
+
 - Initial public structure: `@hshm/vuedo` library (`createPdfKit`, `renderHtml`,
   `renderComposite`, `generatePdf`) with Vue SSR → asset-inlined HTML → Gotenberg
   pipeline.

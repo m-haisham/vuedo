@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { node } from "@elysiajs/node";
 import path from "node:path";
 import { readFileSync } from "node:fs";
-import { createVuedo, inlineCssAssets } from "@hshm/vuedo";
+import { createVuedo, inlineCssAssets, GotenbergDriver } from "@hshm/vuedo";
 import { swagger } from "@elysiajs/swagger";
 import type { PdfTemplateProps } from "./generated/pdf-templates";
 
@@ -30,7 +30,7 @@ const css = await loadCss();
 
 export const vuedo = createVuedo<PdfTemplateProps>({
   templatesDir,
-  gotenbergUrl: process.env.GOTENBERG_URL ?? "http://localhost:3000",
+  driver: new GotenbergDriver(process.env.GOTENBERG_URL ?? "http://localhost:3000"),
   css,
   manifestPath: path.resolve("dist/pdf-manifest.json"),
 });

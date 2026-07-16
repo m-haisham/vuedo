@@ -7,15 +7,26 @@ import {
 } from "./renderer.js";
 import { loadManifest, type PdfManifest } from "./manifest.js";
 import { renderComponent } from "./render-component.js";
-import { sendToGotenberg } from "./gotenberg.js";
 import { wrapBody, wrapHeader, wrapFooter } from "./html.js";
 import { inlineCssAssets, inlineHtmlAssets } from "./inline-assets.js";
 import type { Discovery } from "./discover.js";
+import {
+  type PdfDriver,
+  GotenbergDriver,
+} from "./drivers/index.js";
 
 export interface VuedoOptions {
   /** Folder of `.vue` templates. Defaults to `<cwd>/templates`. */
   templatesDir?: string;
-  gotenbergUrl: string;
+  /**
+   * The PDF backend to render with. Required. Two are built in:
+   * `GotenbergDriver` (remote Chromium service) and `ChromiumDriver` (local
+   * Puppeteer). Pass a `gotenbergUrl` instead to auto-build a Gotenberg driver
+   * (kept for backwards compatibility). Implement `PdfDriver` to add your own.
+   */
+  driver?: PdfDriver;
+  /** Shorthand for `driver: new GotenbergDriver(url)`. Deprecated in favor of `driver`. */
+  gotenbergUrl?: string;
   /** Optional — enables layout-measurement caching (planned). */
   redisUrl?: string;
   /** Optional — enables pre-flight DOM measurement (planned). */
@@ -68,6 +79,8 @@ export interface Vuedo<
 }
 
 export { inlineCssAssets };
+export { PdfDriver, GotenbergDriver, ChromiumDriver } from "./drivers/index.js";
+export type { DriverRenderInput, ChromiumDriverOptions } from "./drivers/index.js";
 
 export function createVuedo<
   Props extends Record<string, { body: any; options?: any }> = Record<
@@ -77,6 +90,22 @@ export function createVuedo<
 >(options: VuedoOptions): Vuedo<Props> {
   const templatesDir = options.templatesDir ?? path.join(process.cwd(), "templates");
   const assetsDir = options.assetsDir ?? path.join(templatesDir, "..", "assets");
+
+  // Resolve the render driver. A caller must supply either `driver` or the
+  // legacy `gotenbergUrl` shorthand. We do NOT silently default to an engine —
+  // users opt into their backend intentionally.
+  const driver: PdfDriver =
+    options.driver ??
+    (options.gotenbergUrl
+      ? new GotenbergDriver(options.gotenbergUrl)
+      : (() => {
+          throw new Error(
+            "createVuedo requires a render `driver`. Pass " +
+              "`driver: new GotenbergDriver(url)` or `driver: new ChromiumDriver()` " +
+              "(see @hshm/vuedo drivers), or set `gotenbergUrl` for the legacy shorthand.",
+          );
+        })());
+
   const isDev =
     (options.mode ??
       (process.env.NODE_ENV === "production"
@@ -174,7 +203,7 @@ export function createVuedo<
       layout.footer && data.footer !== undefined
         ? await renderOne(layout.footer, data.footer, "footer")
         : undefined;
-    return sendToGotenberg(options.gotenbergUrl, {
+    return driver.render({
       body,
       header,
       footer,
@@ -191,6 +220,7 @@ export function createVuedo<
     generatePdf,
     async close() {
       await closeOwnedRenderer();
+      await driver.close();
     },
   };
 }
