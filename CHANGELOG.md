@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **vuedo:** Split HTML wrapping into per-section `wrapBody`, `wrapHeader`, and
+  `wrapFooter` functions. Header/footer get `!important` resets and a negative
+  margin pull into their reserved Gotenberg band; `wrapHtml` is now a deprecated
+  alias for `wrapBody`.
+
 ### Added
 
 - **vuedo:** Pluggable PDF render drivers behind an abstract `PdfDriver` interface.
