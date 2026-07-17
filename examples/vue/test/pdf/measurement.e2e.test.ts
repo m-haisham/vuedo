@@ -3,6 +3,7 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import {
   createVuedo,
+  GotenbergDriver,
   ChromiumDriver,
   PuppeteerMeasurer,
   resolveMargins,
@@ -190,7 +191,7 @@ describe.skipIf(!browserlessAvailable || !gotenbergAvailable)(
 
       const kit = createVuedo({
         templatesDir: path.resolve("templates"),
-        gotenbergUrl: GOTENBERG_URL,
+        driver: new GotenbergDriver(GOTENBERG_URL),
         mode: "production",
         manifestPath: path.resolve("dist/pdf-manifest.json"),
         measurer,
@@ -235,7 +236,7 @@ describe.skipIf(!browserlessAvailable || !gotenbergAvailable)(
 
       const kit = createVuedo({
         templatesDir: path.resolve("templates"),
-        gotenbergUrl: GOTENBERG_URL,
+        driver: new GotenbergDriver(GOTENBERG_URL),
         mode: "production",
         manifestPath: path.resolve("dist/pdf-manifest.json"),
         measurer,

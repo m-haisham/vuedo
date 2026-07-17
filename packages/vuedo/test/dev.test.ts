@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll } from "vitest";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createVuedo } from "../src/index.js";
+import { createVuedo, GotenbergDriver } from "../src/index.js";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const templatesDir = path.resolve(dir, "fixtures/templates");
@@ -11,7 +11,7 @@ const templatesDir = path.resolve(dir, "fixtures/templates");
 // and compiles the fixture template via ssrLoadModule — no build step.
 const kit = createVuedo({
   templatesDir,
-  gotenbergUrl: "http://unused.local",
+  driver: new GotenbergDriver("http://unused.local"),
   mode: "development",
 });
 

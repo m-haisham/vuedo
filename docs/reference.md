@@ -129,13 +129,13 @@ string instead.
 export interface VuedoOptions {
   templatesDir: string;           // absolute path to the folder of .vue templates
   driver: PdfDriver;              // required — the PDF backend (GotenbergDriver | ChromiumDriver)
-  gotenbergUrl?: string;          // legacy shorthand: driver = new GotenbergDriver(url)
-  redisUrl?: string;               // optional — enables layout-measurement caching
-  browserlessUrl?: string;         // optional — enables pre-flight DOM measurement
+  measurer?: ChromiumMeasurer;    // optional — pre-flight DOM measurement of header/footer heights
   mode?: 'development' | 'production';   // default: derived from NODE_ENV
   manifestPath?: string;           // default: '<templatesDir>/../dist/pdf-manifest.json'
   css?: string;                    // optional — raw CSS inlined into every section
   tailwind?: string | { entry: string; sources?: SourceEntry[] }; // optional — Tailwind v4 entry compiled by the package
+  assetsDir?: string;              // optional — folder of static assets inlined as Base64 (default: <templatesDir>/../assets)
+  cache?: Cache;                   // optional — cache backend for memoizing renders, Tailwind compilation, etc.
 }
 
 // Abstract backend. Implement this to add a new render engine.

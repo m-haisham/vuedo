@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runBuild } from "../src/cli.js";
-import { createVuedo } from "../src/index.js";
+import { createVuedo, GotenbergDriver } from "../src/index.js";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const templatesDir = path.resolve(dir, "fixtures/templates");
@@ -36,7 +36,7 @@ describe("createVuedo — production (manifest, compiled module)", () => {
   it("renders a body + paired header from the manifest without a dev Vite", async () => {
     const kit = createVuedo({
       templatesDir,
-      gotenbergUrl: "http://unused.local",
+      driver: new GotenbergDriver("http://unused.local"),
       mode: "production",
       manifestPath: path.resolve(outDir, "pdf-manifest.json"),
     });
