@@ -16,11 +16,14 @@ This library is not yet published to npm, I am not sure if it can be used in its
 
 ```bash
 pnpm install
-pnpm --filter @hshm/vuedo build
 pnpm run dev
 ```
 
-We will be adding more documentation and examples in the future when we have decoupled it from the example and stabilized the api to an extend. For now, please refer to the example project for usage.
+We will be adding more documentation and examples in the future when we have ~~decoupled it from the example~~ and stabilized the api to an extend. For now, please refer to the example project for usage.
+
+## Future Plans
+
+We plan to extract the core library and decouple it from vue, then extend it to work with other frontend frameworks like React.js and Svelte. We also plan to add more features like live preview, custom fonts, and more.
 
 ## Disclaimer
 
