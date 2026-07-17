@@ -11,12 +11,15 @@
     }
   },
   "scripts": {
-    "dev": "pnpm --filter example-vue dev",
-    "build": "pnpm --filter example-vue build",
-    "start": "pnpm --filter example-vue start",
-    "typecheck": "pnpm --filter example-vue typecheck",
-    "test": "pnpm -r test",
-    "infra:up": "pnpm --filter example-vue infra:up",
-    "infra:down": "pnpm --filter example-vue infra:down"
+    "dev": "turbo dev --filter=example-vue",
+    "build": "turbo build",
+    "start": "turbo start --filter=example-vue",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "infra:up": "docker compose -f examples/vue/compose.yml up -d",
+    "infra:down": "docker compose -f examples/vue/compose.yml down"
+  },
+  "devDependencies": {
+    "turbo": "^2.10.5"
   }
 }

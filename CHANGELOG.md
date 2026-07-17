@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **CI:** GitHub Actions workflow (`.github/workflows/ci.yml`) that runs build, typecheck, and tests on every push and PR to `main`.
+- **repo:** Migrated to Turborepo for task orchestration — `turbo.json` defines the
+  pipeline (`build` → `^build`, `dev`, `test`, `typecheck`, etc.) with local
+  caching of `dist/**` outputs. Root scripts now delegate to `turbo` instead of
+  raw `pnpm --filter`; `pnpm dev` / `pnpm build` / `pnpm start` / `pnpm test`
+  work as before with automatic dependency resolution and caching.
 
 ### Changed
 
