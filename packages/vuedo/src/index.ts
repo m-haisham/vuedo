@@ -25,14 +25,9 @@ export interface VuedoOptions {
   /**
    * The PDF backend to render with. Required. Two are built in:
    * `GotenbergDriver` (remote Chromium service) and `ChromiumDriver` (local
-   * Puppeteer). Pass a `gotenbergUrl` instead to auto-build a Gotenberg driver
-   * (kept for backwards compatibility). Implement `PdfDriver` to add your own.
+   * Puppeteer). Implement `PdfDriver` to add your own.
    */
   driver?: PdfDriver;
-  /** Shorthand for `driver: new GotenbergDriver(url)`. Deprecated in favor of `driver`. */
-  gotenbergUrl?: string;
-  /** Optional — enables layout-measurement caching (planned). */
-  redisUrl?: string;
   /**
    * The measurer to use for pre-flight DOM measurement of header/footer
    * heights. When set, `generatePdf()` measures rendered banner heights and
@@ -137,20 +132,17 @@ export function createVuedo<
   const assetsDir =
     options.assetsDir ?? path.join(templatesDir, "..", "assets");
 
-  // Resolve the render driver. A caller must supply either `driver` or the
-  // legacy `gotenbergUrl` shorthand. We do NOT silently default to an engine —
-  // users opt into their backend intentionally.
+  // Resolve the render driver. A caller must supply a `driver`. We do NOT
+  // silently default to an engine — users opt into their backend intentionally.
   const driver: PdfDriver =
     options.driver ??
-    (options.gotenbergUrl
-      ? new GotenbergDriver(options.gotenbergUrl)
-      : (() => {
-          throw new Error(
-            "createVuedo requires a render `driver`. Pass " +
-              "`driver: new GotenbergDriver(url)` or `driver: new ChromiumDriver()` " +
-              "(see @hshm/vuedo drivers), or set `gotenbergUrl` for the legacy shorthand.",
-          );
-        })());
+    (() => {
+      throw new Error(
+        "createVuedo requires a render `driver`. Pass " +
+          "`driver: new GotenbergDriver(url)` or `driver: new ChromiumDriver()` " +
+          "(see @hshm/vuedo drivers).",
+      );
+    })();
 
   // Resolve the measurer for pre-flight DOM measurement of header/footer
   // heights. Optional — when present, `generatePdf()` measures rendered banner

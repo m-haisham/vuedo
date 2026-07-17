@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { execSync } from "node:child_process";
 import path from "node:path";
-import { createVuedo } from "@hshm/vuedo";
+import { createVuedo, GotenbergDriver } from "@hshm/vuedo";
 import pdfParse from "pdf-parse";
 
 // Per-template E2E for the `invoice` PDF (§7): exercise the *production*
@@ -41,7 +41,7 @@ describe.skipIf(!gotenbergAvailable)(
     it("renders body + auto-paired header/footer and returns a real PDF", async () => {
       const kit = createVuedo({
         templatesDir: path.resolve("templates"),
-        gotenbergUrl: GOTENBERG_URL,
+        driver: new GotenbergDriver(GOTENBERG_URL),
         mode: "production",
         manifestPath: path.resolve("dist/pdf-manifest.json"),
       });
