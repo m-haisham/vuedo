@@ -166,20 +166,22 @@ props via Volar. The generated file is gitignored (`src/generated/`).
 - `pnpm install` — install all workspace deps
 - `pnpm --filter @hshm/vuedo build` — compile the library to `packages/vuedo/dist`
   (**do this first** — the example service and its Vite config import the built lib)
-- `pnpm dev` (root) — runs `vite dev` (`:5173`, Path A) **and** the Elysia
-  server (`:8080`) concurrently (delegates to `example-vue`). The
-  `@hshm/vuedo/vite` plugin's `configureServer` fires in the Vite process, so
-  vuedo shares that Vite instance (tier 2) for template hot-compile **and**
-  emits/watches `examples/vue/src/generated/vuedo.d.ts`. Tailwind is compiled
-  by the package from `assets/app.css` at render time (no separate Tailwind/watch
-  script). Consumers with no `vite dev` at all fall back to vuedo's tier-3 owned
-  Vite and still get the generated types at startup.
-- `pnpm build` (root) — `vite build` in the example (delegates to `example-vue`) with the `vuedo` plugin → `dist/` +
-  `pdf-manifest.json` + `src/generated/vuedo.d.ts`; Tailwind is compiled
-  by the package at runtime from `assets/app.css` (no `build:css` step)
+- `pnpm dev` (root) — uses `turbo` to build the library first (from cache if
+  unchanged) then runs `vite dev` (`:5173`, Path A) **and** the Elysia server
+  (`:8080`) concurrently in `example-vue`. The `@hshm/vuedo/vite` plugin's
+  `configureServer` fires in the Vite process, so vuedo shares that Vite instance
+  (tier 2) for template hot-compile **and** emits/watches
+  `examples/vue/src/generated/vuedo.d.ts`. Tailwind is compiled by the package
+  from `assets/app.css` at render time (no separate Tailwind/watch script).
+  Consumers with no `vite dev` at all fall back to vuedo's tier-3 owned Vite and
+  still get the generated types at startup.
+- `pnpm build` (root) — `turbo build` => builds the library first (`tsc`) then
+  `vite build` in the example with the `vuedo` plugin → `dist/` +
+  `pdf-manifest.json` + `src/generated/vuedo.d.ts`. Both are cached by turbo.
 - `pnpm start` (root) — `NODE_ENV=production` server, reads the manifest
-- `pnpm typecheck` (root) — `vue-tsc --noEmit` (validates generated props)
-- `pnpm -r test` — run both suites (library + consumer)
+- `pnpm typecheck` (root) — `vue-tsc --noEmit` via turbo (validates generated props)
+- `pnpm test` (root) — `vitest run` in both packages via turbo (build deps resolved
+  and cached automatically).
 
 ## Changelog (`CHANGELOG.md`)
 
@@ -246,4 +248,6 @@ Rules:
   `?preview=html` (no Gotenberg) and checks TypeBox validation (422 on a missing
   required section); `pdf.e2e.test.ts` builds `dist/`, renders through **real
   Gotenberg**, and parses the PDF with `pdf-parse`. Both skip automatically when
-  Gotenberg is unreachable — bring it up with `docker compose -f deploy/docker-compose.yml up` (§6, infra only).
+  Gotenberg is unreachable — bring it up with `pnpm infra:up`.
+- Turbo caches test results — re-running `pnpm test` after no source changes
+  replays from cache in milliseconds.
