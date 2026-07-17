@@ -10,7 +10,7 @@ This is a **pnpm workspace** with two parts:
   service) that turns Vue+Tailwind templates into PDFs: Vue SSR → asset-inlined
   HTML → Gotenberg (headless Chromium). Consumers keep their own HTTP server and
   routes; the library exposes `createVuedo()` → `renderHtml()` / `generatePdf()`.
-- **root (`vuedo`)** — an example **consumer**: a plain Elysia backend that
+- **`examples/vue`** — an example **consumer**: a plain Elysia backend that
   installs `@hshm/vuedo` (via `workspace:*`) and calls it from its own routes.
 
 The authoritative architecture/spec is [`docs/reference.md`](docs/reference.md).
@@ -61,7 +61,7 @@ vite-plugin.ts      exported as '@hshm/vuedo/vite'
 cli.ts              exported as bin 'vuedo'
 ```
 
-## Root Service Layout
+## Example Consumer Layout (`examples/vue`)
 
 ```
 templates/         Vue SFCs — the PDF templates (file-based layout convention, §below).
@@ -165,15 +165,16 @@ props via Volar. The generated file is gitignored (`src/generated/`).
 
 - `pnpm install` — install all workspace deps
 - `pnpm --filter @hshm/vuedo build` — compile the library to `packages/vuedo/dist`
-  (**do this first** — the root service and its Vite config import the built lib)
+  (**do this first** — the example service and its Vite config import the built lib)
 - `pnpm dev` (root) — runs `vite dev` (`:5173`, Path A) **and** the Elysia
-  server (`:8080`) concurrently. The `@hshm/vuedo/vite` plugin's `configureServer`
-  fires in the Vite process, so vuedo shares that Vite instance (tier 2) for
-  template hot-compile **and** emits/watches `src/generated/vuedo.d.ts`. Tailwind
-  is compiled by the package from `assets/app.css` at render time (no separate
-  Tailwind/watch script). Consumers with no `vite dev` at all fall back to
-  vuedo's tier-3 owned Vite and still get the generated types at startup.
-- `pnpm build` (root) — `vite build` with the `vuedo` plugin → `dist/` +
+  server (`:8080`) concurrently (delegates to `example-vue`). The
+  `@hshm/vuedo/vite` plugin's `configureServer` fires in the Vite process, so
+  vuedo shares that Vite instance (tier 2) for template hot-compile **and**
+  emits/watches `examples/vue/src/generated/vuedo.d.ts`. Tailwind is compiled
+  by the package from `assets/app.css` at render time (no separate Tailwind/watch
+  script). Consumers with no `vite dev` at all fall back to vuedo's tier-3 owned
+  Vite and still get the generated types at startup.
+- `pnpm build` (root) — `vite build` in the example (delegates to `example-vue`) with the `vuedo` plugin → `dist/` +
   `pdf-manifest.json` + `src/generated/vuedo.d.ts`; Tailwind is compiled
   by the package at runtime from `assets/app.css` (no `build:css` step)
 - `pnpm start` (root) — `NODE_ENV=production` server, reads the manifest
@@ -241,7 +242,7 @@ Rules:
   drives `createVuedo` in development mode against a fixture `templatesDir`
   (tier-3 ssrLoadModule, incl. `renderComposite`); `manifest.prod.test.ts` runs
   the real build (`runBuild`) then renders via the manifest in production mode.
-- **Consumer** (root `test`): `app.test.ts` hits each typed Elysia route with
+- **Consumer** (`examples/vue/test`): `app.test.ts` hits each typed Elysia route with
   `?preview=html` (no Gotenberg) and checks TypeBox validation (422 on a missing
   required section); `pdf.e2e.test.ts` builds `dist/`, renders through **real
   Gotenberg**, and parses the PDF with `pdf-parse`. Both skip automatically when

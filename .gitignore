@@ -5,6 +5,7 @@ node_modules/
 dist/
 dist-server/
 packages/*/dist/
+examples/*/dist/
 
 # Test / coverage artifacts
 coverage/
@@ -19,8 +20,8 @@ coverage/
 # Library build: transient vite config written next to dist/cli.js
 packages/*/.vuedo-build-*.ts
 
-# Generated template-props types (emitted by @hshm/vuedo on build / `vuedo types`)
-src/generated/
+# Generated template-props types (emitted by @hshm/vuedo on build / `vuedo types)
+examples/*/src/generated/
 
 # Logs
 *.log

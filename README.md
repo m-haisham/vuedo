@@ -12,7 +12,7 @@ This library primarily targets to eliminate all the small friction points that c
 
 ## Getting Started
 
-This library is not yet published to npm, I am not sure if it can be used in its current state yet. Right now its just coupled to an example project that uses elysia as the backend. The example project is located at root folder. You can run the example project by running the following command:
+This library is not yet published to npm, I am not sure if it can be used in its current state yet. Right now its just coupled to an example project that uses elysia as the backend. The example project is located at `examples/vue/`. You can run the example project by running the following command:
 
 ```bash
 pnpm install

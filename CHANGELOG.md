@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **repo:** Moved the example consumer from the root into
+  `examples/vue/`, published as `@vuedo/example-vue`. Root is now the
+  workspace root only; run `pnpm dev` / `pnpm build` / `pnpm start` from
+  the root as before (delegated via `--filter`).
+
 ### Fixed
 
 - **vuedo:** Header top padding and footer bottom padding were being stripped

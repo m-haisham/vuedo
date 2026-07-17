@@ -1,26 +1,8 @@
 {
   "name": "vuedo",
   "version": "1.0.0",
-  "description": "PDF generation service — a consumer of @hshm/vuedo",
-  "type": "module",
-  "scripts": {
-    "dev": "concurrently \"vite dev --port 5173\" \"tsx watch --ignore '**/*.timestamp-*.mjs' src/server.ts\"",
-    "build": "vite build",
-    "start": "NODE_ENV=production tsx src/server.ts",
-    "typecheck": "vue-tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "infra:up": "docker-compose up -d",
-    "infra:down": "docker-compose down"
-  },
-  "keywords": [
-    "pdf",
-    "vue",
-    "ssr",
-    "gotenberg",
-    "elysia"
-  ],
-  "author": "",
+  "private": true,
+  "description": "Vue SSR → PDF generation — monorepo",
   "license": "ISC",
   "packageManager": "pnpm@10.14.0",
   "pnpm": {
@@ -28,24 +10,13 @@
       "@sinclair/typebox": ">=0.34.0 <1"
     }
   },
-  "dependencies": {
-    "@elysiajs/node": "^1.4.5",
-    "@elysiajs/openapi": "^1.4.15",
-    "@hshm/vuedo": "workspace:*",
-    "elysia": "^1.0.0",
-    "vue": "^3.4.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@vitejs/plugin-vue": "^5.0.0",
-    "@vue/server-renderer": "^3.4.0",
-    "concurrently": "^10.0.3",
-    "pdf-parse": "^1.1.1",
-    "puppeteer-core": "^25.3.0",
-    "tsx": "^4.0.0",
-    "typescript": "^5.4.0",
-    "vite": "^5.2.0",
-    "vitest": "^1.6.0",
-    "vue-tsc": "^2.0.0"
+  "scripts": {
+    "dev": "pnpm --filter example-vue dev",
+    "build": "pnpm --filter example-vue build",
+    "start": "pnpm --filter example-vue start",
+    "typecheck": "pnpm --filter example-vue typecheck",
+    "test": "pnpm -r test",
+    "infra:up": "pnpm --filter example-vue infra:up",
+    "infra:down": "pnpm --filter example-vue infra:down"
   }
 }
