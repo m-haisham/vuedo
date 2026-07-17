@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **vuedo:** Header/footer height measurement now respects `createVuedo({ cache })` —
+  when a cache backend is configured, `resolveMargins` stores measured heights
+  keyed by `viewportWidthPx:sha256(html)`, avoiding redundant Chromium renders
+  on repeated calls with the same template content.
 - **vuedo:** Abstract `Cache` class with three implementations — `NoopCache`
   (default, no-op), `InMemoryCache` (in-process `Map` with TTL), and `RedisCache`
   (any Redis client implementing `get`/`set`/`del`). Each entry accepts a

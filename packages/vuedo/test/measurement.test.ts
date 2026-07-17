@@ -31,6 +31,7 @@ const {
   PX_PER_INCH,
   DEFAULT_PAPER_WIDTH_INCHES,
 } = await import("../src/drivers/measurement.js");
+const { InMemoryCache } = await import("../src/cache/memory.js");
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -200,8 +201,13 @@ describe("PuppeteerMeasurer", () => {
 // resolveMargins
 // ---------------------------------------------------------------------------
 describe("resolveMargins", () => {
+  let cache: InMemoryCache;
+
+  beforeEach(() => {
+    cache = new InMemoryCache();
+  });
   it("returns all zeros when no measurer and no user options", async () => {
-    const result = await resolveMargins(undefined, {});
+    const result = await resolveMargins(cache, undefined, {});
     expect(result).toEqual({
       marginTop: 0,
       marginBottom: 0,
@@ -217,7 +223,7 @@ describe("resolveMargins", () => {
         return 99; // would be used if user didn't provide their own
       }
     }
-    const result = await resolveMargins(
+    const result = await resolveMargins(cache, 
       new StubMeasurer(),
       { marginTop: 1.5, marginBottom: 2.5 },
       "<header>h</header>",
@@ -234,7 +240,7 @@ describe("resolveMargins", () => {
         return 0.75;
       }
     }
-    const result = await resolveMargins(
+    const result = await resolveMargins(cache, 
       new StubMeasurer(),
       {},
       "<header>h</header>",
@@ -251,7 +257,7 @@ describe("resolveMargins", () => {
         return 0.5;
       }
     }
-    const result = await resolveMargins(
+    const result = await resolveMargins(cache, 
       new StubMeasurer(),
       {},
       undefined,
@@ -277,7 +283,7 @@ describe("resolveMargins", () => {
         }
       }
     }
-    const result = await resolveMargins(
+    const result = await resolveMargins(cache, 
       new SlowMeasurer(),
       {},
       "<header>h</header>",
@@ -295,7 +301,7 @@ describe("resolveMargins", () => {
       readonly name = "spy";
       measure = measureFn;
     }
-    const result = await resolveMargins(new SpyMeasurer(), {}, undefined, "<footer>f</footer>");
+    const result = await resolveMargins(cache, new SpyMeasurer(), {}, undefined, "<footer>f</footer>");
     expect(measureFn).toHaveBeenCalledOnce(); // only footer
     expect(result.marginTop).toBe(0);
     expect(result.marginBottom).toBe(0.5);
@@ -307,7 +313,7 @@ describe("resolveMargins", () => {
       readonly name = "spy";
       measure = measureFn;
     }
-    const result = await resolveMargins(new SpyMeasurer(), {}, "<header>h</header>", undefined);
+    const result = await resolveMargins(cache, new SpyMeasurer(), {}, "<header>h</header>", undefined);
     expect(measureFn).toHaveBeenCalledOnce(); // only header
     expect(result.marginTop).toBe(0.5);
     expect(result.marginBottom).toBe(0);
@@ -320,7 +326,7 @@ describe("resolveMargins", () => {
         throw new Error("browser down");
       }
     }
-    const result = await resolveMargins(
+    const result = await resolveMargins(cache, 
       new FailMeasurer(),
       {},
       "<header>h</header>",
@@ -331,7 +337,7 @@ describe("resolveMargins", () => {
   });
 
   it("passes through left/right margins unchanged", async () => {
-    const result = await resolveMargins(undefined, {
+    const result = await resolveMargins(cache, undefined, {
       marginLeft: 0.5,
       marginRight: 1,
     });
@@ -346,7 +352,7 @@ describe("resolveMargins", () => {
       measure = measureFn;
     }
     // Letter width: 8.5 inches → 816px
-    await resolveMargins(
+    await resolveMargins(cache, 
       new SpyMeasurer(),
       { paperWidth: 8.5 },
       "<header>h</header>",
@@ -361,8 +367,165 @@ describe("resolveMargins", () => {
       readonly name = "spy";
       measure = measureFn;
     }
-    await resolveMargins(new SpyMeasurer(), {}, "<header>h</header>", undefined);
+    await resolveMargins(cache, new SpyMeasurer(), {}, "<header>h</header>", undefined);
     const expectedWidth = Math.round(DEFAULT_PAPER_WIDTH_INCHES * PX_PER_INCH);
     expect(measureFn).toHaveBeenCalledWith("<header>h</header>", expectedWidth);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Measurement cache
+  // ---------------------------------------------------------------------------
+  it("caches a measurement and reuses the cached value on a second call", async () => {
+    let callCount = 0;
+    class CounterMeasurer extends ChromiumMeasurer {
+      readonly name = "counter";
+      async measure() {
+        callCount++;
+        return 0.75;
+      }
+    }
+
+    const measurer = new CounterMeasurer();
+
+    // First call — measures both header and footer.
+    const r1 = await resolveMargins(cache, 
+      measurer,
+      {},
+      "<header>h</header>",
+      "<footer>f</footer>",
+    );
+    expect(r1.marginTop).toBe(0.75);
+    expect(r1.marginBottom).toBe(0.75);
+    expect(callCount).toBe(2);
+
+    // Second call — same content, same A4 width — uses cache.
+    const r2 = await resolveMargins(cache, 
+      measurer,
+      {},
+      "<header>h</header>",
+      "<footer>f</footer>",
+    );
+    expect(r2.marginTop).toBe(0.75);
+    expect(r2.marginBottom).toBe(0.75);
+    // measurer.measure was NOT called again — results came from cache.
+    expect(callCount).toBe(2);
+  });
+
+  it("distinguishes cache entries by content — different HTML, different measure", async () => {
+    const measured: string[] = [];
+    class RecorderMeasurer extends ChromiumMeasurer {
+      readonly name = "recorder";
+      async measure(html: string) {
+        measured.push(html);
+        return html.includes("header") ? 1 : 0.5;
+      }
+    }
+
+    const measurer = new RecorderMeasurer();
+
+    await resolveMargins(cache, 
+      measurer,
+      {},
+      "<header>one</header>",
+      "<footer>one</footer>",
+    );
+    expect(measured).toHaveLength(2);
+
+    // Same header, different footer — only footer should be re-measured.
+    await resolveMargins(cache, 
+      measurer,
+      {},
+      "<header>one</header>",
+      "<footer>two</footer>",
+    );
+    // Header was cached — only the new footer hit the measurer.
+    expect(measured).toHaveLength(3);
+    expect(measured[2]).toBe("<footer>two</footer>");
+  });
+
+  it("distinguishes cache entries by viewport width", async () => {
+    let callCount = 0;
+    class CounterMeasurer extends ChromiumMeasurer {
+      readonly name = "counter";
+      async measure() {
+        callCount++;
+        return 0.75;
+      }
+    }
+
+    const measurer = new CounterMeasurer();
+
+    // First call at default A4 width.
+    await resolveMargins(cache, 
+      measurer,
+      {},
+      "<header>h</header>",
+      undefined,
+    );
+    expect(callCount).toBe(1);
+
+    // Same content, but different paper width → different viewport → cache miss.
+    await resolveMargins(cache, 
+      measurer,
+      { paperWidth: 8.5 },
+      "<header>h</header>",
+      undefined,
+    );
+    expect(callCount).toBe(2);
+  });
+
+  it("does not cache failed measurements", async () => {
+    let callCount = 0;
+    class FailOnceMeasurer extends ChromiumMeasurer {
+      readonly name = "fail-once";
+      async measure() {
+        callCount++;
+        if (callCount === 1) throw new Error("transient failure");
+        return 0.5;
+      }
+    }
+
+    const measurer = new FailOnceMeasurer();
+
+    await resolveMargins(cache, measurer, {}, "<header>h</header>", undefined);
+    // First call failed → marginTop is 0 (best-effort fallback).
+    expect(callCount).toBe(1);
+
+    // Retry with same content — should NOT be cached (failure wasn't stored).
+    await resolveMargins(cache, measurer, {}, "<header>h</header>", undefined);
+    expect(callCount).toBe(2);
+  });
+
+  it("cache hits do not count toward user-provided margin skip", async () => {
+    let callCount = 0;
+    class CounterMeasurer extends ChromiumMeasurer {
+      readonly name = "counter";
+      async measure() {
+        callCount++;
+        return 0.75;
+      }
+    }
+
+    const measurer = new CounterMeasurer();
+
+    // Prime the cache for this content.
+    await resolveMargins(cache, 
+      measurer,
+      {},
+      "<header>h</header>",
+      undefined,
+    );
+    expect(callCount).toBe(1);
+
+    // Call with explicit marginTop — header measurement is skipped entirely
+    // (user value takes precedence). Even though cache has a hit, it's not consulted.
+    const result = await resolveMargins(cache, 
+      measurer,
+      { marginTop: 2 },
+      "<header>h</header>",
+      undefined,
+    );
+    expect(result.marginTop).toBe(2);
+    expect(callCount).toBe(1); // no extra calls
   });
 });

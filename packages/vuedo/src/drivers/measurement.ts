@@ -6,7 +6,9 @@
 // is the contract, PuppeteerMeasurer is the concrete implementation that
 // reuses a ChromiumDriver's browser connection.
 
+import { createHash } from "node:crypto";
 import type { ChromiumDriver } from "./chromium.js";
+import type { Cache } from "../cache/index.js";
 
 /** CSS pixels per inch — Chromium's print box uses 96 CSS px per inch. */
 export const PX_PER_INCH = 96;
@@ -14,6 +16,8 @@ export const PX_PER_INCH = 96;
 export const DEFAULT_PAPER_WIDTH_INCHES = 8.27;
 /** Default timeout in milliseconds for a single measurement. */
 export const DEFAULT_MEASURE_TIMEOUT_MS = 3_000;
+/** Cache-key prefix for measurement results to avoid collisions with other cache domains. */
+const CACHE_KEY_PREFIX = "measure:";
 
 /**
  * Races `promise` against a timeout. Resolves with the promise's value on
@@ -107,6 +111,32 @@ export interface MarginInput {
 }
 
 /**
+ * Measures the rendered height of an HTML snippet, checking `cache` first.
+ * Only caches on success — timeouts/failures are not stored.
+ */
+async function measureOrCache(
+  cache: Cache,
+  measurer: ChromiumMeasurer,
+  html: string,
+  viewportWidthPx: number,
+  timeout: number,
+): Promise<number> {
+  const contentHash = createHash("sha256").update(html).digest("hex");
+  const key = `${CACHE_KEY_PREFIX}${viewportWidthPx}:${contentHash}`;
+  const cached = await cache.get<number>(key);
+  if (cached !== undefined) return cached;
+
+  const result = await withTimeout(
+    measurer.measure(html, viewportWidthPx),
+    timeout,
+  );
+
+  await cache.set(key, result);
+
+  return result;
+}
+
+/**
  * Resolves final page margins by filling in measured header/footer heights
  * where the caller hasn't provided explicit values. Measurement is best-effort
  * — failures silently fall back to 0.
@@ -115,8 +145,13 @@ export interface MarginInput {
  *
  * The measurement viewport width is derived from `paperWidth` (in inches)
  * so the rendered banner height matches the actual paper geometry.
+ *
+ * Results are cached via the supplied `Cache` instance, keyed by
+ * `viewportWidthPx:sha256(html)`, so repeated generation of the same template + data
+ * reuses prior measurements.
  */
 export async function resolveMargins(
+  cache: Cache,
   measurer: ChromiumMeasurer | undefined,
   options: MarginInput,
   header?: string,
@@ -136,12 +171,11 @@ export async function resolveMargins(
     );
     const timeout = options.measureTimeoutMs ?? DEFAULT_MEASURE_TIMEOUT_MS;
 
-    // TODO: cache measurement results (Redis) keyed by HTML content hash
     const tasks: Array<Promise<void>> = [];
 
     if (marginTop === undefined && header) {
       tasks.push(
-        withTimeout(measurer.measure(header, viewportWidthPx), timeout)
+        measureOrCache(cache, measurer, header, viewportWidthPx, timeout)
           .then((h) => {
             marginTop = h;
           })
@@ -152,7 +186,7 @@ export async function resolveMargins(
     }
     if (marginBottom === undefined && footer) {
       tasks.push(
-        withTimeout(measurer.measure(footer, viewportWidthPx), timeout)
+        measureOrCache(cache, measurer, footer, viewportWidthPx, timeout)
           .then((h) => {
             marginBottom = h;
           })
