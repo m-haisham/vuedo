@@ -153,7 +153,7 @@ export type PdfTemplateProps = {
 Consumers pass it to the kit for full type-checking:
 
 ```ts
-const pdf = createVuedo<PdfTemplateProps>({ templatesDir, gotenbergUrl });
+const pdf = createVuedo<PdfTemplateProps>({ templatesDir, driver: new GotenbergDriver(process.env.GOTENBERG_URL) });
 pdf.generatePdf("invoice", { header, body, footer, options }); // fully type-checked
 ```
 
