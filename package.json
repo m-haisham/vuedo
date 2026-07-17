@@ -16,8 +16,8 @@
     "start": "turbo start --filter=example-vue",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
-    "infra:up": "docker compose -f examples/vue/compose.yml up -d",
-    "infra:down": "docker compose -f examples/vue/compose.yml down"
+    "infra:up": "docker-compose up -d",
+    "infra:down": "docker-compose down"
   },
   "devDependencies": {
     "turbo": "^2.10.5"
