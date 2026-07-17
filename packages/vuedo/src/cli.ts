@@ -31,7 +31,7 @@ export async function runBuild(
   await new Promise<void>((resolve, reject) => {
     const vitePath = (() => {
       try {
-        return require.resolve("vite/bin/vite.js");
+        return fileURLToPath(import.meta.resolve("vite/bin/vite.js"));
       } catch {
         return path.resolve(
           import.meta.dirname,

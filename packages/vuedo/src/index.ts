@@ -26,9 +26,9 @@ export interface VuedoOptions {
   /** Defaults to `<templatesDir>/../dist/pdf-manifest.json`. */
   manifestPath?: string;
   /**
-   * CSS inlined into every wrapped document. Can be a raw CSS string or a path
-   * to a pre-compiled CSS file. Defaults to `<manifestDir>/vuedo.css` in
-   * production, `<generated>/vuedo.css` in development.
+   * Path to a pre-compiled CSS file inlined into every wrapped document.
+   * Defaults to `<manifestDir>/vuedo.css` in production,
+   * `<generated>/vuedo.css` in development.
    */
   css?: string;
   /**
@@ -125,6 +125,7 @@ export function createVuedo<
     path.resolve(templatesDir, "..", "dist", "pdf-manifest.json");
 
   const cssEntry = options.cssEntry;
+
   const cssOutput =
     options.css ??
     (isDev

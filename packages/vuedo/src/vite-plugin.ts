@@ -67,6 +67,7 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
       const onChange = () =>
         void generateTypes(opts.templatesDir, typesOut).catch(() => {});
       watcher.on("add", (_file) => onChange());
+      watcher.on("change", (_file) => onChange());
       watcher.on("unlink", (_file) => onChange());
     },
     async config(_userConfig, { command }) {
