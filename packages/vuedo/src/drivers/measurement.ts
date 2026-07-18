@@ -93,6 +93,12 @@ export class PuppeteerMeasurer extends ChromiumMeasurer {
         return el ? Math.ceil(el.getBoundingClientRect().height) : 0;
       });
       return px / PX_PER_INCH;
+    } catch {
+      console.error(
+        `[${this.name}] Failed to measure HTML snippet — returning 0 height`,
+      );
+
+      return 0;
     } finally {
       await page.close();
     }
@@ -183,8 +189,11 @@ export async function resolveMargins(
           .then((h) => {
             marginTop = h;
           })
-          .catch(() => {
-            /* measurement best-effort — margin stays 0 */
+          .catch((e) => {
+            console.error(
+              `[${measurer.name}] Failed to measure header HTML snippet — falling back to 0 height`,
+              e,
+            );
           }),
       );
     }
@@ -194,8 +203,11 @@ export async function resolveMargins(
           .then((h) => {
             marginBottom = h;
           })
-          .catch(() => {
-            /* measurement best-effort — margin stays 0 */
+          .catch((e) => {
+            console.error(
+              `[${measurer.name}] Failed to measure footer HTML snippet — falling back to 0 height`,
+              e,
+            );
           }),
       );
     }

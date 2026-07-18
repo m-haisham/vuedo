@@ -1,7 +1,14 @@
 import { Elysia, t } from "elysia";
 import { node } from "@elysiajs/node";
 import path from "node:path";
-import { createVuedo, GotenbergDriver, type PaperSize } from "@hshm/vuedo";
+import {
+  ChromiumDriver,
+  createVuedo,
+  GotenbergDriver,
+  InMemoryCache,
+  PuppeteerMeasurer,
+  type PaperSize,
+} from "@hshm/vuedo";
 import { openapi } from "@elysiajs/openapi";
 import type { PdfTemplateProps } from "./generated/vuedo";
 
@@ -12,6 +19,12 @@ export const vuedo = createVuedo<PdfTemplateProps>({
   driver: new GotenbergDriver(
     process.env.GOTENBERG_URL ?? "http://localhost:3000",
   ),
+  measurer: new PuppeteerMeasurer(
+    new ChromiumDriver({
+      browserURL: "http://localhost:3001",
+    }),
+  ),
+  cache: new InMemoryCache(),
   manifestPath: path.resolve("dist/pdf-manifest.json"),
 });
 
