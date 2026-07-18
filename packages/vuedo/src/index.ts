@@ -53,6 +53,10 @@ export interface GeneratePdfOptions {
   marginBottom?: number;
   marginLeft?: number;
   marginRight?: number;
+  /** Extra margin (inches) added on top of the resolved marginTop (user-provided or measured). Defaults to 0. */
+  extraMarginTop?: number;
+  /** Extra margin (inches) added on top of the resolved marginBottom (user-provided or measured). Defaults to 0. */
+  extraMarginBottom?: number;
   paperWidth?: number;
   paperHeight?: number;
   measureTimeoutMs?: number;

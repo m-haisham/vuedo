@@ -104,6 +104,10 @@ export interface MarginInput {
   marginBottom?: number;
   marginLeft?: number;
   marginRight?: number;
+  /** Extra margin (inches) added on top of the resolved marginTop (user-provided or measured). Defaults to 0. */
+  extraMarginTop?: number;
+  /** Extra margin (inches) added on top of the resolved marginBottom (user-provided or measured). Defaults to 0. */
+  extraMarginBottom?: number;
   /** Paper width in inches. Used to size the measurement viewport. Defaults to A4 (8.27). */
   paperWidth?: number;
   /** Timeout in milliseconds for each measurement. Defaults to 3 000ms. */
@@ -200,8 +204,8 @@ export async function resolveMargins(
   }
 
   return {
-    marginTop: marginTop ?? 0,
-    marginBottom: marginBottom ?? 0,
+    marginTop: (marginTop ?? 0) + (options.extraMarginTop ?? 0),
+    marginBottom: (marginBottom ?? 0) + (options.extraMarginBottom ?? 0),
     marginLeft: options.marginLeft,
     marginRight: options.marginRight,
   };

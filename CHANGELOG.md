@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for building the preview HTML frame, `PAPER_SIZES` (A4, A3, Letter, Legal,
   A5) and the `PaperSize` type. Exported from the main `@hshm/vuedo` entry.
 
+- **vuedo:** `GeneratePdfOptions` now supports `extraMarginTop` and
+  `extraMarginBottom` fields that add to the resolved margin (user-provided
+  or measured), both defaulting to 0.
+
 - **server:** The example consumer (`GET /invoice/preview` and
   `GET /pos-order/preview`) now serves live previews with paper-size selection
   via `?paperSize=letter` and hot-reload driven by Vite's HMR WebSocket.
