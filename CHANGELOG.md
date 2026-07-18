@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **vuedo:** `createVuedo()` now exposes a `previewHtml(template, data, options?)`
+  method that returns a live-preview HTML page with an interactive paper-size
+  selector (default A4). Unlike `renderComposite`, assets are NOT inlined
+  (fonts/images are served via Vite's dev server). The compiled Tailwind CSS is
+  compiled server-side via `ssrLoadModule` with `?inline` and injected as a
+  `<style>` tag so it contains the actual utility classes, not the `@import`
+  source. Accepts `paperSize`, `css` (pre-compiled CSS string), and `vitePort`
+  options; when `vitePort` is set, the page includes a WebSocket client that
+  connects to Vite's HMR WebSocket and reloads on template changes.
+
+- **vuedo:** The `@hshm/vuedo/vite` plugin accepts a new `preview` option.
+  When enabled (`vuedo({ preview: true })`), the Vite dev server registers
+  `/__vuedo/hmr` (SSE endpoint) and `/__vuedo/preview/:template` (preview
+  middleware). The preview middleware SSR-renders the template with layout
+  discovery, wraps it in a preview page with paper-size overlay, and pipes the
+  HTML through Vite's transform pipeline for HMR client injection. The file
+  watcher sends `reload` events to connected SSE clients on any template
+  change, so the browser auto-refreshes during development.
+
+- **vuedo:** New `@hshm/vuedo/preview` sub-module exports `buildPreviewHtml()`
+  for building the preview HTML frame, `PAPER_SIZES` (A4, A3, Letter, Legal,
+  A5) and the `PaperSize` type. Exported from the main `@hshm/vuedo` entry.
+
+- **server:** The example consumer (`GET /invoice/preview` and
+  `GET /pos-order/preview`) now serves live previews with paper-size selection
+  via `?paperSize=letter` and hot-reload driven by Vite's HMR WebSocket.
+
 - **vuedo:** CSS is now compiled via `@tailwindcss/vite` Vite plugin instead of a
   custom `@tailwindcss/node` pipeline. The plugin integrates with the host's
   Vite dev server for live CSS and compiles CSS during `vite build`, saving the

@@ -13,6 +13,11 @@ import {
   resolveMargins,
 } from "./drivers/index.js";
 import { Cache, NoopCache } from "./cache/index.js";
+import {
+  buildPreviewHtml,
+  type PreviewHtmlOptions,
+  type PaperSize,
+} from "./preview.js";
 
 export interface VuedoOptions {
   /** Folder of `.vue` templates. Defaults to `<cwd>/templates`. */
@@ -71,8 +76,15 @@ export interface Vuedo<
     template: T,
     data: Props[T],
   ): Promise<ReadableStream>;
+  previewHtml<T extends keyof Props>(
+    template: T,
+    data: Props[T],
+    options?: PreviewHtmlOptions,
+  ): Promise<string>;
   close(): Promise<void>;
 }
+
+export type { PreviewHtmlOptions, PaperSize } from "./preview.js";
 
 export { inlineCssAssets };
 export {
@@ -205,10 +217,45 @@ export function createVuedo<
     });
   }
 
+  async function previewHtml(
+    template: any,
+    data: any,
+    previewOptions?: PreviewHtmlOptions,
+  ): Promise<string> {
+    const layout = await renderer.layoutOf(template);
+
+    const body = await renderer.render(template, data.body);
+    const header =
+      layout.header && data.header !== undefined
+        ? await renderer.render(layout.header, data.header)
+        : null;
+    const footer =
+      layout.footer && data.footer !== undefined
+        ? await renderer.render(layout.footer, data.footer)
+        : null;
+
+    const sections = [
+      header ? '<div class="vuedo-header">' + header + "</div>" : "",
+      '<div class="vuedo-body">' + body + "</div>",
+      footer ? '<div class="vuedo-footer">' + footer + "</div>" : "",
+    ].join("\n");
+
+    // Compile the Tailwind CSS string for the preview page.
+    const css = await renderer.resolveCss();
+
+    return buildPreviewHtml(sections, {
+      paperSize: previewOptions?.paperSize,
+      css,
+      vitePort: previewOptions?.vitePort,
+      downloadUrl: previewOptions?.downloadUrl,
+    });
+  }
+
   return {
     renderHtml,
     renderComposite,
     generatePdf,
+    previewHtml,
     async close() {
       await renderer.close();
       await driver.close();

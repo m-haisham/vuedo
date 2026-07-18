@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { node } from "@elysiajs/node";
 import path from "node:path";
-import { createVuedo, GotenbergDriver } from "@hshm/vuedo";
+import { createVuedo, GotenbergDriver, type PaperSize } from "@hshm/vuedo";
 import { openapi } from "@elysiajs/openapi";
 import type { PdfTemplateProps } from "./generated/vuedo";
 
@@ -94,6 +94,63 @@ function pdfResponse(stream: ReadableStream, filename: string): Response {
   });
 }
 
+// Mock data for the live preview routes (§preview-pipeline).
+const INVOICE_MOCK = {
+  header: {
+    companyName: "Acme Corp",
+    companyEmail: "billing@acme.com",
+    invoiceNumber: "INV-2024-001",
+    issueDate: "2024-01-15",
+    dueDate: "2024-02-14",
+  },
+  body: {
+    billTo: {
+      name: "Jane Smith",
+      company: "Smith & Co",
+      address: "123 Main St, Springfield, IL 62701",
+    },
+    items: [
+      { description: "Consulting services (Jan)", qty: 40, unitPrice: 150 },
+      { description: "Software license", qty: 1, unitPrice: 1200 },
+      { description: "Hosting (monthly)", qty: 1, unitPrice: 99 },
+    ],
+    taxRate: 0.08,
+    notes: "Payment due within 30 days",
+  },
+  footer: {
+    thankYou: "Thank you for your business!",
+    contactEmail: "support@acme.com",
+    website: "https://acme.com",
+  },
+  options: { marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0 },
+};
+
+const POS_ORDER_MOCK = {
+  header: {
+    store: "Corner Store #42",
+    address: "456 Oak Ave, Portland, OR 97201",
+    orderNumber: "POS-2024-89123",
+    date: "2024-07-15 14:32",
+    cashier: "Alex Rivera",
+  },
+  body: {
+    items: [
+      { name: "Organic Honey", qty: 2, price: 8.99 },
+      { name: "Sourdough Bread", qty: 1, price: 5.49 },
+      { name: "Almond Milk", qty: 3, price: 4.29 },
+      { name: "Free-Range Eggs (dozen)", qty: 1, price: 6.99 },
+    ],
+    tax: 3.12,
+    total: 42.14,
+    paymentMethod: "Visa **** 4242",
+  },
+  footer: {
+    thankYou: "Thank you — come again!",
+    returnPolicy: "Returns accepted within 30 days with receipt.",
+  },
+  options: { marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0 },
+};
+
 export const app = new Elysia({ adapter: node() })
   .use(
     openapi({
@@ -185,6 +242,95 @@ export const app = new Elysia({ adapter: node() })
         description:
           "Renders the POS receipt template (header + body + footer) into a PDF. " +
           "Append `?preview=html` to receive the composed SSR HTML instead.",
+      },
+    },
+  )
+  .get(
+    "/invoice/preview",
+    async ({ query }) => {
+      const VITE_PORT = Number(process.env.VITE_PORT) || 5173;
+      const html = await vuedo.previewHtml("invoice", INVOICE_MOCK, {
+        vitePort: VITE_PORT,
+        paperSize: (query.paperSize as PaperSize) ?? "a4",
+        downloadUrl: "/invoice/pdf",
+      });
+      return new Response(html, {
+        headers: { "Content-Type": "text/html" },
+      });
+    },
+    {
+      query: t.Object({
+        paperSize: t.Optional(t.String()),
+      }),
+      detail: {
+        tags: ["PDF Templates"],
+        summary: "Live preview of the invoice template",
+        description:
+          "Renders the invoice template in a preview page with paper-size " +
+          "selector and hot-reload via Vite HMR. Edit the Vue template and " +
+          "the browser updates automatically.",
+      },
+    },
+  )
+  .get(
+    "/pos-order/preview",
+    async ({ query }) => {
+      const VITE_PORT = Number(process.env.VITE_PORT) || 5173;
+      const html = await vuedo.previewHtml("pos.pos-order", POS_ORDER_MOCK, {
+        vitePort: VITE_PORT,
+        paperSize: (query.paperSize as PaperSize) ?? "a4",
+        downloadUrl: "/pos-order/pdf",
+      });
+      return new Response(html, {
+        headers: { "Content-Type": "text/html" },
+      });
+    },
+    {
+      query: t.Object({
+        paperSize: t.Optional(t.String()),
+      }),
+      detail: {
+        tags: ["PDF Templates"],
+        summary: "Live preview of the POS receipt template",
+        description:
+          "Renders the POS receipt template in a preview page with paper-size " +
+          "selector and hot-reload. Edit the Vue template and the browser " +
+          "updates automatically.",
+      },
+    },
+  )
+  // GET PDF download endpoints used by the preview toolbar's Download button.
+  .get(
+    "/invoice/pdf",
+    async () => {
+      return pdfResponse(
+        await vuedo.generatePdf("invoice", INVOICE_MOCK),
+        "invoice",
+      );
+    },
+    {
+      detail: {
+        tags: ["PDF Templates"],
+        summary: "Download invoice as PDF",
+        description:
+          "Returns the invoice template rendered as a PDF using mock data.",
+      },
+    },
+  )
+  .get(
+    "/pos-order/pdf",
+    async () => {
+      return pdfResponse(
+        await vuedo.generatePdf("pos.pos-order", POS_ORDER_MOCK),
+        "pos-order",
+      );
+    },
+    {
+      detail: {
+        tags: ["PDF Templates"],
+        summary: "Download POS receipt as PDF",
+        description:
+          "Returns the POS receipt template rendered as a PDF using mock data.",
       },
     },
   )
