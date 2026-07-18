@@ -20,6 +20,9 @@ coverage/
 # Library build: transient vite config written next to dist/cli.js
 packages/*/.vuedo-build-*.ts
 
+# Dev-only artifacts (CSS, types, etc.) emitted by @hshm/vuedo
+.vuedo/
+
 # Generated template-props types (emitted by @hshm/vuedo on build / `vuedo types)
 examples/*/src/generated/
 

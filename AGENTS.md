@@ -75,6 +75,7 @@ assets/            static assets referenced by templates (images + fonts, base64
   app.css           Tailwind v4 entry — compiled by @hshm/vuedo itself (no build step in the service)
   logo.png
   fonts/            custom .woff2/.ttf files (referenced from app.css @font-face)
+.vuedo/           AUTO-GENERATED dev artifacts (compiled CSS, etc.) — gitignored, see ".vuedo Dev Folder"
 src/
   server.ts         normal Elysia server (node adapter) — one typed route per template
   generated/        AUTO-GENERATED PdfTemplateProps (gitignored) — see "Type Generation"
@@ -84,6 +85,20 @@ src/
 The library defaults `templatesDir` to `<cwd>/templates`, so a consumer usually
 doesn't even need to pass it. Assets live in `<cwd>/assets` (sibling of
 `templates/`) so a template's `../assets/...` import resolves there.
+
+## `.vuedo` Dev Folder
+
+The `.vuedo/` directory (at the consumer's project root, gitignored) holds
+auto-generated artifacts used only during development. None of these files are
+used in production (e.g. in a container).
+
+For now it contains:
+
+- **`vuedo.css`** — the compiled Tailwind v4 CSS produced by the
+  `@tailwindcss/vite` plugin during `vite dev`. The `@hshm/vuedo/vite` plugin
+  watches the CSS entry (`assets/app.css`) and templates, and on each change
+  re-compiles the CSS and writes it here. `createVuedo()` reads it from this
+  path in dev mode.
 
 ## File-Based Layout Convention
 
@@ -172,9 +187,9 @@ props via Volar. The generated file is gitignored (`src/generated/`).
   `configureServer` fires in the Vite process, so vuedo shares that Vite instance
   (tier 2) for template hot-compile **and** emits/watches
   `examples/vue/src/generated/vuedo.d.ts`. Tailwind is compiled by the package
-  from `assets/app.css` at render time (no separate Tailwind/watch script).
-  Consumers with no `vite dev` at all fall back to vuedo's tier-3 owned Vite and
-  still get the generated types at startup.
+  from `assets/app.css` at render time and written to `.vuedo/vuedo.css`
+  (no separate Tailwind/watch script). Consumers with no `vite dev` at all fall
+  back to vuedo's tier-3 owned Vite and still get the generated types at startup.
 - `pnpm build` (root) — `turbo build` => builds the library first (`tsc`) then
   `vite build` in the example with the `vuedo` plugin → `dist/` +
   `pdf-manifest.json` + `src/generated/vuedo.d.ts`. Both are cached by turbo.

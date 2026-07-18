@@ -33,7 +33,7 @@ export interface VuedoOptions {
   /**
    * Path to a pre-compiled CSS file inlined into every wrapped document.
    * Defaults to `<manifestDir>/vuedo.css` in production,
-   * `<generated>/vuedo.css` in development.
+   * `<.vuedo>/vuedo.css` in development.
    */
   css?: string;
   /**
@@ -141,7 +141,7 @@ export function createVuedo<
   const cssOutput =
     options.css ??
     (isDev
-      ? path.resolve(templatesDir, "..", "src", "generated", "vuedo.css")
+      ? path.resolve(templatesDir, "..", ".vuedo", "vuedo.css")
       : path.resolve(path.dirname(manifestPath), "vuedo.css"));
 
   const renderer: VuedoRenderer = isDev

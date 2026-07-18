@@ -18,7 +18,7 @@ export interface VuedoPluginOptions {
   /**
    * Path to the user's Tailwind v4 CSS entry (e.g. `assets/app.css`).
    * When given, the plugin compiles CSS via `ssrLoadModule` on every relevant
-   * file change and writes the result to `<generated>/vuedo.css`.
+   * file change and writes the result to `<.vuedo>/vuedo.css`.
    */
   cssEntry?: string;
   /**
@@ -46,7 +46,7 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
     opts.typesOut ?? path.resolve(process.cwd(), "src/generated/vuedo.d.ts");
   const cssEntry = opts.cssEntry ? path.resolve(opts.cssEntry) : undefined;
   const cssDevOut = cssEntry
-    ? path.resolve(path.dirname(typesOut), "vuedo.css")
+    ? path.resolve(process.cwd(), ".vuedo", "vuedo.css")
     : undefined;
 
   const previewEnabled =

@@ -83,6 +83,18 @@ with `?inline`, then writing the result.
 
 ## 4. Public API & Package Layout
 
+### 4.0 `.vuedo` Dev Folder
+
+The `.vuedo/` directory at the consumer's project root holds auto-generated
+artifacts used **only during development**. These files are gitignored and never
+shipped to production (e.g. inside a Docker image). For now it contains:
+
+- **`vuedo.css`** — the compiled Tailwind v4 CSS produced by the
+  `@tailwindcss/vite` plugin during `vite dev`. The `@hshm/vuedo/vite` plugin
+  watches the CSS entry (e.g. `assets/app.css`) and templates, and on each
+  change re-compiles the CSS and writes it here. `createVuedo()` reads it from
+  this path in dev mode.
+
 ### 4.1 Package Layout
 
 ```
@@ -139,7 +151,7 @@ export interface VuedoOptions {
   measurer?: ChromiumMeasurer;    // optional — pre-flight DOM measurement of header/footer heights
   mode?: 'development' | 'production';   // default: derived from NODE_ENV
   manifestPath?: string;           // default: '<templatesDir>/../dist/pdf-manifest.json'
-  css?: string;                    // optional — pre-compiled CSS file path (e.g. dist/vuedo.css) or raw CSS string, inlined into every section
+  css?: string;                    // optional — pre-compiled CSS file path (e.g. dist/vuedo.css for prod, .vuedo/vuedo.css for dev) or raw CSS string, inlined into every section
   cssEntry?: string;               // optional — path to the Tailwind v4 CSS entry (e.g. assets/app.css) for dev-mode Vite compilation
   assetsDir?: string;              // optional — folder of static assets inlined as Base64 (default: <templatesDir>/../assets)
   cache?: Cache;                   // optional — cache backend for memoizing renders, Tailwind compilation, etc.

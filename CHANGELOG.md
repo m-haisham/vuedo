@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **vuedo:** A `.vuedo/` development folder at the consumer project root now
+  holds auto-generated dev artifacts (gitignored). The compiled Tailwind v4 CSS
+  is no longer written to `src/generated/vuedo.css` — it goes to
+  `.vuedo/vuedo.css` instead. These files are never used in production builds
+  (e.g. inside a Docker image).
+
 - **vuedo:** `createVuedo()` now exposes a `previewHtml(template, data, options?)`
   method that returns a live-preview HTML page with an interactive paper-size
   selector (default A4). Unlike `renderComposite`, assets are NOT inlined
