@@ -19,34 +19,17 @@ import {
   type PreviewHtmlOptions,
   type PaperSize,
 } from "@vuedo/core";
+import { renderNamedComponent, type TemplateModule } from "./render-component.js";
 
 export interface VuedoOptions {
-  /** Folder of `.vue` templates. Defaults to `<cwd>/templates`. */
   templatesDir?: string;
-  /** The PDF backend to render with. Required. */
   driver?: PdfDriver;
-  /** The measurer for pre-flight DOM measurement of header/footer heights. */
   measurer?: ChromiumMeasurer;
-  /** Defaults to NODE_ENV. */
   mode?: "development" | "production";
-  /** Defaults to `<templatesDir>/../dist/pdf-manifest.json`. */
   manifestPath?: string;
-  /**
-   * Path to a pre-compiled CSS file inlined into every wrapped document.
-   * Defaults to `<manifestDir>/vuedo.css` in production,
-   * `<.vuedo>/vuedo.css` in development.
-   */
   css?: string;
-  /**
-   * The consumer's Vite dev server. Optional — when omitted in dev mode,
-   * the library lazy-creates one from the consumer's `vite.config.ts` and
-   * closes it on `vuedo.close()`. Pass your own instance to control the
-   * lifecycle (e.g. for testing or when you need to mount its middleware).
-   */
   devServer?: ViteDevServer;
-  /** Folder of static assets (images/fonts) inlined as Base64. Defaults to `<templatesDir>/../assets`. */
   assetsDir?: string;
-  /** Optional cache backend for memoizing expensive operations. */
   cache?: Cache;
 }
 
@@ -55,9 +38,7 @@ export interface GeneratePdfOptions {
   marginBottom?: number;
   marginLeft?: number;
   marginRight?: number;
-  /** Extra margin (inches) added on top of the resolved marginTop (user-provided or measured). Defaults to 0. */
   extraMarginTop?: number;
-  /** Extra margin (inches) added on top of the resolved marginBottom (user-provided or measured). Defaults to 0. */
   extraMarginBottom?: number;
   paperWidth?: number;
   paperHeight?: number;
@@ -109,6 +90,15 @@ export type {
 export { Cache, NoopCache, InMemoryCache, RedisCache } from "@vuedo/core";
 export type { RedisClient } from "@vuedo/core";
 
+// React conventions:
+// 1. File-based: x.tsx (body), x-header.tsx (header), x-footer.tsx (footer)
+// 2. Single-file: x.tsx exports named Body, Header, Footer components
+//
+// File-based aux files take precedence. When no file-based header/footer
+// exists, the renderer checks the body module for named Header/Footer exports.
+// This lets React users write everything in one file while Vue users rely on
+// the file-based convention.
+
 export function createVuedo<
   Props extends Record<string, { body: any; options?: any }> = Record<
     string,
@@ -125,8 +115,7 @@ export function createVuedo<
     (() => {
       throw new Error(
         "createVuedo requires a render `driver`. Pass " +
-          "`driver: new GotenbergDriver(url)` or `driver: new ChromiumDriver()` " +
-          "(see @vuedo/vue drivers).",
+          "`driver: new GotenbergDriver(url)` or `driver: new ChromiumDriver()`.",
       );
     })();
 
@@ -152,12 +141,77 @@ export function createVuedo<
     ? createDevRendererEx(templatesDir, options.devServer, cssOutput)
     : createProdRendererEx(manifestPath, cssOutput);
 
+  // Check if a body template module has named Header/Footer exports
+  // (single-file React convention). Used as fallback when file-based
+  // aux files don't exist.
+  const namedExportCache = new Map<string, { hasHeader: boolean; hasFooter: boolean }>();
+
+  async function resolveLayout(
+    name: string,
+  ): Promise<{ header?: string; footer?: string }> {
+    const layout = await renderer.layoutOf(name);
+
+    // If file-based layout defines both header and footer, we're done
+    if (layout.header && layout.footer) return layout;
+
+    // For single-file React templates (or partial file-based), check
+    // whether the body module exports named Header/Footer components.
+    const cacheKey = name;
+    if (!namedExportCache.has(cacheKey)) {
+      let hasHeader = !!layout.header;
+      let hasFooter = !!layout.footer;
+      try {
+        // Only probe for exports that aren't already covered by file-based aux.
+        // Pass empty object {} so component rendering succeeds even with
+        // required props — React renders undefined values as nothing.
+        if (!hasHeader) {
+          try {
+            const headerHtml = await renderer.render(name, {}, "Header");
+            hasHeader = headerHtml.length > 0;
+          } catch { /* no Header export or component threw */ }
+        }
+        if (!hasFooter) {
+          try {
+            const footerHtml = await renderer.render(name, {}, "Footer");
+            hasFooter = footerHtml.length > 0;
+          } catch { /* no Footer export or component threw */ }
+        }
+      } catch {
+        // renderer throw — leave defaults
+      }
+      namedExportCache.set(cacheKey, { hasHeader, hasFooter });
+    }
+
+    const named = namedExportCache.get(cacheKey)!;
+    return {
+      header: layout.header ?? (named.hasHeader ? name : undefined),
+      footer: layout.footer ?? (named.hasFooter ? name : undefined),
+    };
+  }
+
   async function renderOne(
     name: string,
     data: unknown,
     section: "body" | "header" | "footer" = "body",
   ): Promise<string> {
-    const inner = await renderer.render(name, data);
+    const inner = await renderer.render(name, data, section === "body" ? undefined : section);
+    const inlined = await inlineHtmlAssets(inner, assetsDir);
+    const css = await renderer.resolveCss();
+    if (section === "header") return wrapHeader(inlined, css);
+    if (section === "footer") return wrapFooter(inlined, css);
+    return wrapBody(inlined, css);
+  }
+
+  // Render a single section (body by default) for use in renderComposite/generatePdf.
+  // For React single-file templates, section can be "Header" or "Footer" to render
+  // the named export from the same file.
+  async function renderSection(
+    name: string,
+    data: unknown,
+    section: "body" | "header" | "footer",
+    sourceName: string,
+  ): Promise<string> {
+    const inner = await renderer.render(sourceName, data, section === "body" ? undefined : section);
     const inlined = await inlineHtmlAssets(inner, assetsDir);
     const css = await renderer.resolveCss();
     if (section === "header") return wrapHeader(inlined, css);
@@ -170,15 +224,24 @@ export function createVuedo<
   }
 
   async function renderComposite(template: any, data: any): Promise<string> {
-    const layout = await renderer.layoutOf(template);
+    const resolved = await resolveLayout(template);
+    const hasFileHeader =
+      resolved.header !== template && resolved.header !== undefined;
+    const hasFileFooter =
+      resolved.footer !== template && resolved.footer !== undefined;
+
     const body = await renderOne(template, data.body);
     const header =
-      layout.header && data.header !== undefined
-        ? await renderOne(layout.header, data.header, "header")
+      resolved.header && data.header !== undefined
+        ? hasFileHeader
+          ? await renderOne(resolved.header, data.header, "header")
+          : await renderSection(template, data.header, "header", template)
         : null;
     const footer =
-      layout.footer && data.footer !== undefined
-        ? await renderOne(layout.footer, data.footer, "footer")
+      resolved.footer && data.footer !== undefined
+        ? hasFileFooter
+          ? await renderOne(resolved.footer, data.footer, "footer")
+          : await renderSection(template, data.footer, "footer", template)
         : null;
     const sections = [
       header ? `<div class="vuedo-header">${header}</div>` : "",
@@ -192,15 +255,24 @@ export function createVuedo<
     template: any,
     data: any,
   ): Promise<ReadableStream> {
-    const layout = await renderer.layoutOf(template);
+    const resolved = await resolveLayout(template);
+    const hasFileHeader =
+      resolved.header !== template && resolved.header !== undefined;
+    const hasFileFooter =
+      resolved.footer !== template && resolved.footer !== undefined;
+
     const body = await renderOne(template, data.body);
     const header =
-      layout.header && data.header !== undefined
-        ? await renderOne(layout.header, data.header, "header")
+      resolved.header && data.header !== undefined
+        ? hasFileHeader
+          ? await renderOne(resolved.header, data.header, "header")
+          : await renderSection(template, data.header, "header", template)
         : undefined;
     const footer =
-      layout.footer && data.footer !== undefined
-        ? await renderOne(layout.footer, data.footer, "footer")
+      resolved.footer && data.footer !== undefined
+        ? hasFileFooter
+          ? await renderOne(resolved.footer, data.footer, "footer")
+          : await renderSection(template, data.footer, "footer", template)
         : undefined;
 
     const margins = await resolveMargins(
@@ -226,16 +298,24 @@ export function createVuedo<
     data: any,
     previewOptions?: PreviewHtmlOptions,
   ): Promise<string> {
-    const layout = await renderer.layoutOf(template);
+    const resolved = await resolveLayout(template);
+    const hasFileHeader =
+      resolved.header !== template && resolved.header !== undefined;
+    const hasFileFooter =
+      resolved.footer !== template && resolved.footer !== undefined;
 
     const body = await renderer.render(template, data.body);
     const header =
-      layout.header && data.header !== undefined
-        ? await renderer.render(layout.header, data.header)
+      resolved.header && data.header !== undefined
+        ? hasFileHeader
+          ? await renderer.render(resolved.header, data.header)
+          : await renderer.render(template, data.header, "Header")
         : null;
     const footer =
-      layout.footer && data.footer !== undefined
-        ? await renderer.render(layout.footer, data.footer)
+      resolved.footer && data.footer !== undefined
+        ? hasFileFooter
+          ? await renderer.render(resolved.footer, data.footer)
+          : await renderer.render(template, data.footer, "Footer")
         : null;
 
     const sections = [

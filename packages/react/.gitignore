@@ -1,0 +1,6 @@
+dist/
+generated/
+.vuedo-build-*.ts
+.tmp-dist/
+.single/
+*.tsbuildinfo

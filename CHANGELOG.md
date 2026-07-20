@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **react:** New `@vuedo/react` package — a React adapter built on `@vuedo/core`,
+  exposing `createVuedo()` for React SSR → PDF generation. Supports React 18+
+  with `react-dom/server` rendering.
+- **react:** Single-file template convention — React templates export named
+  `Body`, `Header`, `Footer` components from a single `.tsx` file, in contrast
+  to Vue's separate-file layout convention.
+- **react:** File-based layout convention also supported for compatibility
+  (`x.tsx` body, `x-header.tsx` header, `x-footer.tsx` footer).
+- **react:** Vite plugin (`@vuedo/react/vite`) with `@vitejs/plugin-react`,
+  auto-discovery of `.tsx` templates, type generation via
+  `ComponentPropsWithoutRef`, and preview middleware.
+- **react:** Example consumer (`examples/react`) — an Elysia server with two
+  templates (invoice + POS receipt) mirroring the Vue example, using the
+  single-file React convention.
+- **react:** Package tests (discover, dev mode, manifest production, types)
+  and consumer tests (router + E2E with real Gotenberg).
+
 ### Changed
 
 - **vuedo:** The single `@hshm/vuedo` package has been split into two:

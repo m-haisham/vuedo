@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.vuedo/
+src/generated/
+*.timestamp-*.mjs

@@ -9,8 +9,9 @@
 //   - Asset inlining (Base64) for offline-safe PDFs
 //   - Live preview page builder
 //   - Pluggable cache backends (memory, Redis, noop)
+//   - Shared renderer factories and layout types for framework adapters
 //
-// Framework adapters (@vuedo/vue, @vuedo/svelte, etc.) build on top of
+// Framework adapters (@vuedo/vue, @vuedo/react, etc.) build on top of
 // this package to provide SSR + template discovery for their framework.
 // ---------------------------------------------------------------------------
 
@@ -43,3 +44,23 @@ export {
 
 export { buildPreviewHtml, PAPER_SIZES } from "./preview.js";
 export type { PreviewHtmlOptions, PaperSize } from "./preview.js";
+
+export type {
+  TemplateKind,
+  DiscoveredLayout,
+  Discovery,
+  PdfManifest,
+} from "./layout.js";
+
+export {
+  createDevRenderer,
+  createProdRenderer,
+  type RenderMod,
+  type VuedoRenderer,
+} from "./renderer.js";
+
+export {
+  getVitePort,
+  resolvePluginOpts,
+  type VuedoPluginOptions,
+} from "./vite-utils.js";

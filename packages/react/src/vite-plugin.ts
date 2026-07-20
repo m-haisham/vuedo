@@ -5,14 +5,10 @@ import { discoverLayouts } from "./discover.js";
 import { writeManifest } from "./manifest.js";
 import { generateTypes } from "./types.js";
 import { inlineAssetsPlugin, buildPreviewHtml, type PaperSize } from "@vuedo/core";
-import { renderComponent } from "./render-component.js";
+import { renderComponent, renderNamedComponent, type TemplateModule } from "./render-component.js";
 import { getVitePort, resolvePluginOpts, type VuedoPluginOptions } from "@vuedo/core";
 
 export type { VuedoPluginOptions };
-
-// ---------------------------------------------------------------------------
-// Plugin
-// ---------------------------------------------------------------------------
 
 export function vuedo(opts: VuedoPluginOptions): Plugin {
   const { outDir, typesOut, cssEntry, cssDevOut } = resolvePluginOpts(opts);
@@ -40,10 +36,11 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
     return discovery!;
   }
 
-  async function ssrRenderSection(
+  async function ssrLoadAndRender(
     server: import("vite").ViteDevServer,
     templateName: string,
     data: unknown,
+    section: string = "body",
   ): Promise<string> {
     const disc = await getDiscovery();
     const file = disc.entries[templateName];
@@ -54,10 +51,33 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
       ? "/@fs/" + file
       : "/" + rel.split(path.sep).join("/");
     const mod = await server.ssrLoadModule(url);
-    return renderComponent(mod, data);
+    if (section === "body") return renderComponent(mod, data);
+    return renderNamedComponent(mod, section, data);
   }
 
-  /** @deprecated Use getVitePort from @vuedo/core */
+  async function loadAndCheckExports(
+    server: import("vite").ViteDevServer,
+    templateName: string,
+  ): Promise<{ hasHeader: boolean; hasFooter: boolean }> {
+    try {
+      const disc = await getDiscovery();
+      const file = disc.entries[templateName];
+      if (!file) return { hasHeader: false, hasFooter: false };
+      const root = server.config.root;
+      const rel = path.relative(root, file);
+      const url = rel.startsWith("..")
+        ? "/@fs/" + file
+        : "/" + rel.split(path.sep).join("/");
+      const mod = await server.ssrLoadModule(url);
+      const m = mod as TemplateModule;
+      return {
+        hasHeader: typeof m.Header === "function",
+        hasFooter: typeof m.Footer === "function",
+      };
+    } catch {
+      return { hasHeader: false, hasFooter: false };
+    }
+  }
 
   return {
     name: "vuedo",
@@ -67,17 +87,9 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
       const watcher = server.watcher;
       watcher.add(opts.templatesDir);
 
-      // -----------------------------------------------------------------------
-      // File-watcher: re-generate types on every template add/remove/change,
-      // re-compile CSS on template/CSS changes, and notify HMR clients.
-      // -----------------------------------------------------------------------
-
       const onTemplateChange = async () => {
         discovery = undefined;
         await generateTypes(opts.templatesDir, typesOut).catch(() => {});
-
-        // Broadcast custom reload event to all WebSocket clients (Vite's HMR
-        // clients + our preview page's raw WebSocket connections).
         try {
           server.ws.send({
             type: "custom",
@@ -120,10 +132,6 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
       watcher.on("add", () => void onTemplateChange());
       watcher.on("unlink", () => void onTemplateChange());
 
-      // -----------------------------------------------------------------------
-      // Preview middleware
-      // -----------------------------------------------------------------------
-
       if (!previewEnabled) return;
 
       const vitePort = getVitePort(server);
@@ -148,15 +156,34 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
               return;
             }
 
-            const body = await ssrRenderSection(server, layout.body, {});
-            const header =
-              layout.header
-                ? await ssrRenderSection(server, layout.header, {})
-                : null;
-            const footer =
-              layout.footer
-                ? await ssrRenderSection(server, layout.footer, {})
-                : null;
+            // Check for named exports in the body file for React-style templates
+            const exports = await loadAndCheckExports(server, layout.body);
+            const effectiveHeader = layout.header ?? (exports.hasHeader ? layout.body : undefined);
+            const effectiveFooter = layout.footer ?? (exports.hasFooter ? layout.body : undefined);
+
+            const body = await ssrLoadAndRender(server, layout.body, {});
+            const header = effectiveHeader
+              ? effectiveHeader === layout.body
+                ? await renderNamedComponent(
+                    await server.ssrLoadModule(
+                      "/" + path.relative(server.config.root, disc.entries[layout.body]).split(path.sep).join("/"),
+                    ),
+                    "Header",
+                    {},
+                  )
+                : await ssrLoadAndRender(server, effectiveHeader, {}, "Header")
+              : null;
+            const footer = effectiveFooter
+              ? effectiveFooter === layout.body
+                ? await renderNamedComponent(
+                    await server.ssrLoadModule(
+                      "/" + path.relative(server.config.root, disc.entries[layout.body]).split(path.sep).join("/"),
+                    ),
+                    "Footer",
+                    {},
+                  )
+                : await ssrLoadAndRender(server, effectiveFooter, {}, "Footer")
+              : null;
 
             const sections = [
               header
@@ -168,7 +195,6 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
                 : "",
             ].join("\n");
 
-            // Compile Tailwind CSS via the running Vite server.
             let css = "";
             if (cssEntry) {
               try {

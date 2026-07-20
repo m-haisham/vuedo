@@ -1,17 +1,22 @@
-import path from "node:path";
 import {
   createDevRenderer,
   createProdRenderer,
   type VuedoRenderer,
   type RenderMod,
 } from "@vuedo/core";
-import { renderComponent } from "./render-component.js";
+import { renderComponent, renderNamedComponent } from "./render-component.js";
 import { discoverLayouts } from "./discover.js";
 import { loadManifest } from "./manifest.js";
 
-// Vue renderMod: always renders the default export, regardless of section.
-const vueRenderMod: RenderMod = async (mod, data, _section) =>
-  renderComponent(mod, data);
+// React renderMod: Body uses named export, Header/Footer use named exports
+// from the same module (single-file convention). The section name "header"
+// maps to the "Header" export, "footer" to "Footer".
+const reactRenderMod: RenderMod = async (mod, data, section = "body") => {
+  if (section === "body") return renderComponent(mod, data);
+  const exportName =
+    section === "header" ? "Header" : section === "footer" ? "Footer" : section;
+  return renderNamedComponent(mod, exportName, data);
+};
 
 export function createDevRendererEx(
   templatesDir: string,
@@ -23,7 +28,7 @@ export function createDevRendererEx(
     devServer,
     cssOutput,
     discoverLayouts,
-    renderMod: vueRenderMod,
+    renderMod: reactRenderMod,
   });
 }
 
@@ -35,7 +40,7 @@ export function createProdRendererEx(
     manifestPath,
     cssOutput,
     loadManifest,
-    renderMod: vueRenderMod,
+    renderMod: reactRenderMod,
   });
 }
 
