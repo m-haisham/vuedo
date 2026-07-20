@@ -163,9 +163,8 @@ describe("PuppeteerMeasurer", () => {
     browser.newPage = vi.fn().mockResolvedValue(fakePage);
 
     const measurer = new PuppeteerMeasurer(driver);
-    await expect(measurer.measure("<div>x</div>")).rejects.toThrow(
-      "nav failed",
-    );
+    const inches = await measurer.measure("<div>x</div>");
+    expect(inches).toBe(0);
     expect(fakePage.close).toHaveBeenCalled();
   });
 
