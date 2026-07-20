@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock puppeteer so ChromiumDriver (needed by PuppeteerMeasurer) resolves.
 const disconnectBrowser = vi.fn();
 vi.mock("puppeteer", () => {
   const browser = {
@@ -183,14 +182,12 @@ describe("PuppeteerMeasurer", () => {
     await measurer.measure("<div>a</div>");
     await measurer.measure("<div>b</div>");
 
-    // Both calls go through the same browser — newPage called twice.
     expect(browser.newPage).toHaveBeenCalledTimes(2);
   });
 
   it("close() is a no-op (driver owns the browser lifecycle)", async () => {
     const driver = new ChromiumDriver();
     const measurer = new PuppeteerMeasurer(driver);
-    // Should not throw and should not disconnect the driver's browser.
     await measurer.close();
     expect(disconnectBrowser).not.toHaveBeenCalled();
   });
@@ -290,7 +287,6 @@ describe("resolveMargins", () => {
     );
     expect(result.marginTop).toBe(1);
     expect(result.marginBottom).toBe(0.5);
-    // Both ran — order doesn't matter, just that both completed.
     expect(order).toHaveLength(2);
   });
 
@@ -350,7 +346,6 @@ describe("resolveMargins", () => {
       readonly name = "spy";
       measure = measureFn;
     }
-    // Letter width: 8.5 inches → 816px
     await resolveMargins(cache, 
       new SpyMeasurer(),
       { paperWidth: 8.5 },
@@ -386,7 +381,6 @@ describe("resolveMargins", () => {
 
     const measurer = new CounterMeasurer();
 
-    // First call — measures both header and footer.
     const r1 = await resolveMargins(cache, 
       measurer,
       {},
@@ -397,7 +391,6 @@ describe("resolveMargins", () => {
     expect(r1.marginBottom).toBe(0.75);
     expect(callCount).toBe(2);
 
-    // Second call — same content, same A4 width — uses cache.
     const r2 = await resolveMargins(cache, 
       measurer,
       {},
@@ -406,7 +399,6 @@ describe("resolveMargins", () => {
     );
     expect(r2.marginTop).toBe(0.75);
     expect(r2.marginBottom).toBe(0.75);
-    // measurer.measure was NOT called again — results came from cache.
     expect(callCount).toBe(2);
   });
 
@@ -430,14 +422,12 @@ describe("resolveMargins", () => {
     );
     expect(measured).toHaveLength(2);
 
-    // Same header, different footer — only footer should be re-measured.
     await resolveMargins(cache, 
       measurer,
       {},
       "<header>one</header>",
       "<footer>two</footer>",
     );
-    // Header was cached — only the new footer hit the measurer.
     expect(measured).toHaveLength(3);
     expect(measured[2]).toBe("<footer>two</footer>");
   });
@@ -454,7 +444,6 @@ describe("resolveMargins", () => {
 
     const measurer = new CounterMeasurer();
 
-    // First call at default A4 width.
     await resolveMargins(cache, 
       measurer,
       {},
@@ -463,7 +452,6 @@ describe("resolveMargins", () => {
     );
     expect(callCount).toBe(1);
 
-    // Same content, but different paper width → different viewport → cache miss.
     await resolveMargins(cache, 
       measurer,
       { paperWidth: 8.5 },
@@ -487,10 +475,8 @@ describe("resolveMargins", () => {
     const measurer = new FailOnceMeasurer();
 
     await resolveMargins(cache, measurer, {}, "<header>h</header>", undefined);
-    // First call failed → marginTop is 0 (best-effort fallback).
     expect(callCount).toBe(1);
 
-    // Retry with same content — should NOT be cached (failure wasn't stored).
     await resolveMargins(cache, measurer, {}, "<header>h</header>", undefined);
     expect(callCount).toBe(2);
   });
@@ -507,7 +493,6 @@ describe("resolveMargins", () => {
 
     const measurer = new CounterMeasurer();
 
-    // Prime the cache for this content.
     await resolveMargins(cache, 
       measurer,
       {},
@@ -516,8 +501,6 @@ describe("resolveMargins", () => {
     );
     expect(callCount).toBe(1);
 
-    // Call with explicit marginTop — header measurement is skipped entirely
-    // (user value takes precedence). Even though cache has a hit, it's not consulted.
     const result = await resolveMargins(cache, 
       measurer,
       { marginTop: 2 },

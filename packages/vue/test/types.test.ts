@@ -24,7 +24,7 @@ describe("generateTypes — inferred VuedoProps", () => {
       `import type { ComponentProps } from "vue-component-type-helpers";`,
     );
     expect(content).toContain(
-      `import type { GeneratePdfOptions } from "@hshm/vuedo";`,
+      `import type { GeneratePdfOptions } from "@vuedo/vue";`,
     );
     expect(content).toContain("export type VuedoProps = {");
     expect(content).toContain(`"Invoice": {`);

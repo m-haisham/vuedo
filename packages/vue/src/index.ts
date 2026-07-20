@@ -5,20 +5,20 @@ import {
   createDevRenderer,
   createProdRenderer,
 } from "./renderer.js";
-import { wrapBody, wrapHeader, wrapFooter } from "./html.js";
-import { inlineCssAssets, inlineHtmlAssets } from "./inline-assets.js";
+import { wrapBody, wrapHeader, wrapFooter } from "@vuedo/core";
+import { inlineCssAssets, inlineHtmlAssets } from "@vuedo/core";
 import {
   type PdfDriver,
   GotenbergDriver,
   type ChromiumMeasurer,
   resolveMargins,
-} from "./drivers/index.js";
-import { Cache, NoopCache } from "./cache/index.js";
+} from "@vuedo/core";
+import { Cache, NoopCache } from "@vuedo/core";
 import {
   buildPreviewHtml,
   type PreviewHtmlOptions,
   type PaperSize,
-} from "./preview.js";
+} from "@vuedo/core";
 
 export interface VuedoOptions {
   /** Folder of `.vue` templates. Defaults to `<cwd>/templates`. */
@@ -90,7 +90,7 @@ export interface Vuedo<
   close(): Promise<void>;
 }
 
-export type { PreviewHtmlOptions, PaperSize } from "./preview.js";
+export type { PreviewHtmlOptions, PaperSize } from "@vuedo/core";
 
 export { inlineCssAssets };
 export {
@@ -100,14 +100,14 @@ export {
   ChromiumMeasurer,
   PuppeteerMeasurer,
   resolveMargins,
-} from "./drivers/index.js";
+} from "@vuedo/core";
 export type {
   DriverRenderInput,
   ChromiumDriverOptions,
   MarginInput,
-} from "./drivers/index.js";
-export { Cache, NoopCache, InMemoryCache, RedisCache } from "./cache/index.js";
-export type { RedisClient } from "./cache/index.js";
+} from "@vuedo/core";
+export { Cache, NoopCache, InMemoryCache, RedisCache } from "@vuedo/core";
+export type { RedisClient } from "@vuedo/core";
 
 export function createVuedo<
   Props extends Record<string, { body: any; options?: any }> = Record<
@@ -126,7 +126,7 @@ export function createVuedo<
       throw new Error(
         "createVuedo requires a render `driver`. Pass " +
           "`driver: new GotenbergDriver(url)` or `driver: new ChromiumDriver()` " +
-          "(see @hshm/vuedo drivers).",
+          "(see @vuedo/vue drivers).",
       );
     })();
 
@@ -244,7 +244,6 @@ export function createVuedo<
       footer ? '<div class="vuedo-footer">' + footer + "</div>" : "",
     ].join("\n");
 
-    // Compile the Tailwind CSS string for the preview page.
     const css = await renderer.resolveCss();
 
     return buildPreviewHtml(sections, {

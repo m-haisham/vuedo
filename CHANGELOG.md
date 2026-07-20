@@ -7,10 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **vuedo:** The single `@hshm/vuedo` package has been split into two:
+  `@vuedo/core` (framework-agnostic primitives: cache, drivers, HTML wrappers,
+  asset inlining, preview) and `@vuedo/vue` (the Vue adapter built on
+  `@vuedo/core`, exposing `createVuedo()`). Consumers should now import from
+  `@vuedo/vue` instead of `@hshm/vuedo`, and from `@vuedo/vue/vite` instead of
+  `@hshm/vuedo/vite`. `@vuedo/vue` re-exports everything from `@vuedo/core`
+  for backwards compatibility — existing imports of `createVuedo`,
+  `GotenbergDriver`, `ChromiumDriver`, `Cache` etc. continue to work via the
+  new `@vuedo/vue` entry-point.
+
 ### Removed
 
 - **vuedo:** The `vuedo` CLI (`vuedo build`, `vuedo types`) has been removed.
-  The Vite plugin (`@hshm/vuedo/vite`) is the sole build path — every consumer
+  The Vite plugin (`@vuedo/vue/vite`) is the sole build path — every consumer
   runs `vite build` with the plugin in their config.
 
 - **vuedo:** The owned-Vite fallback has been removed. In development mode,

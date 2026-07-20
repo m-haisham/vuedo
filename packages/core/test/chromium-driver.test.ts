@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Puppeteer is an OPTIONAL peer dependency and is not installed in the test
-// environment. We mock the dynamic `import("puppeteer")` call inside the driver
-// so the driver logic (setContent, header/footer injection, pdf options,
-// browser lifecycle) is exercised without a real browser.
 const closeBrowser = vi.fn();
 const newPage = vi.fn();
 const pageClose = vi.fn();
@@ -52,7 +48,6 @@ vi.mock("puppeteer", () => {
 
 const disconnectBrowser = vi.fn();
 
-// Import after mocking so the dynamic import resolves to the mock.
 const { ChromiumDriver } = await import("../src/drivers/chromium.js");
 
 beforeEach(() => {
@@ -70,7 +65,6 @@ describe("ChromiumDriver", () => {
       "<html>b</html>",
       expect.objectContaining({ waitUntil: "networkidle0" }),
     );
-    // No header/footer => no injection
     expect(pageEvaluate).not.toHaveBeenCalled();
     expect(pagePdf).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -114,7 +108,6 @@ describe("ChromiumDriver", () => {
   it("connects to a remote browser and detaches (not closes) it on close()", async () => {
     const driver = new ChromiumDriver({ browserWSEndpoint: "ws://chromium:3000" });
     await driver.render({ body: "<html>b</html>" });
-    // No local launch — connect() path was used.
     expect(closeBrowser).not.toHaveBeenCalled();
     await driver.close();
     expect(disconnectBrowser).toHaveBeenCalledOnce();

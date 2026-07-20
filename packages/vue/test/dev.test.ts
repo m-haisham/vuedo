@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { createVuedo, GotenbergDriver } from "../src/index.js";
-import { inlineAssetsPlugin } from "../src/inline-assets.js";
+import { inlineAssetsPlugin } from "@vuedo/core";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const templatesDir = path.resolve(dir, "fixtures/templates");

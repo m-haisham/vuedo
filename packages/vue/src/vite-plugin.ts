@@ -4,9 +4,9 @@ import type { Plugin } from "vite";
 import { discoverLayouts } from "./discover.js";
 import { writeManifest } from "./manifest.js";
 import { generateTypes } from "./types.js";
-import { inlineAssetsPlugin } from "./inline-assets.js";
+import { inlineAssetsPlugin } from "@vuedo/core";
 import { renderComponent } from "./render-component.js";
-import { buildPreviewHtml, type PaperSize } from "./preview.js";
+import { buildPreviewHtml, type PaperSize } from "@vuedo/core";
 
 export interface VuedoPluginOptions {
   /** Absolute (or cwd-relative) path to the folder of `.vue` templates. */

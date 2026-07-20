@@ -58,11 +58,9 @@ describe("GotenbergDriver", () => {
     expect(form.get("marginBottom")).toBe("2");
     expect(form.get("marginLeft")).toBe("3");
     expect(form.get("marginRight")).toBe("4");
-    // A4 default paper size + background graphics on by default
     expect(form.get("paperWidth")).toBe("8.27");
     expect(form.get("paperHeight")).toBe("11.69");
     expect(form.get("backgroundGraphics")).toBe("true");
-    // body + header + footer => 3 file parts
     const files = form.getAll("files") as Blob[];
     expect(files).toHaveLength(3);
     expect((await files[0].text())).toBe("<html>b</html>");
