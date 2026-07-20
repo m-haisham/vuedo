@@ -6,24 +6,36 @@ Guidance for AI agents and contributors working in this repository.
 
 ## Project Overview
 
-This is a **pnpm workspace** with two parts:
+This is a **pnpm workspace** with three parts:
 
-- **`packages/vuedo`** — `@hshm/vuedo`, an embeddable **library** (not a
-  service) that turns Vue+Tailwind templates into PDFs: Vue SSR → asset-inlined
-  HTML → Gotenberg (headless Chromium). Consumers keep their own HTTP server and
-  routes; the library exposes `createVuedo()` → `renderHtml()` / `generatePdf()`.
+- **`packages/core`** — `@vuedo/core`, framework-agnostic **primitives**:
+  pluggable PDF drivers (Gotenberg, Chromium/Puppeteer), header/footer DOM
+  measurement with caching, HTML document-shell wrappers, asset-inlining
+  utilities, and a live-preview page builder. No framework-specific code —
+  designed to be reused by framework adapters.
+- **`packages/vue`** — `@vuedo/vue`, the **Vue adapter** built on
+  `@vuedo/core`: Vue SSR compilation of print templates, file-based layout
+  discovery, dev-mode live compilation via a Vite dev server, type generation,
+  and a Vite plugin. Exposes `createVuedo()` → `renderHtml()` /
+  `generatePdf()`.
 - **`examples/vue`** — an example **consumer**: a plain Elysia backend that
-  installs `@hshm/vuedo` (via `workspace:*`) and calls it from its own routes.
+  installs `@vuedo/vue` (via `workspace:*`) and calls it from its own routes.
 
 The authoritative architecture/spec is [`docs/reference.md`](docs/reference.md).
 When in doubt, follow it.
 
-## Library Public API (`@hshm/vuedo`)
+## Library Public API
 
-Two exports (see `docs/reference.md` §4):
+Three exports (see `docs/reference.md` §4):
 
-- **`@hshm/vuedo`** — `createVuedo(options)` returning `{ renderHtml, renderComposite, generatePdf, close }`.
-- **`@hshm/vuedo/vite`** — a Vite plugin (`vuedo({ templatesDir, outDir })`):
+- **`@vuedo/core`** — framework-agnostic primitives: `PdfDriver`, `GotenbergDriver`,
+  `ChromiumDriver`, `PuppeteerMeasurer`, `resolveMargins`, `Cache`,
+  `InMemoryCache`, `RedisCache`, `wrapBody`/`wrapHeader`/`wrapFooter`,
+  `inlineAssetsPlugin`, `buildPreviewHtml`, etc.
+- **`@vuedo/vue`** — `createVuedo(options)` returning
+  `{ renderHtml, renderComposite, generatePdf, previewHtml, close }`. Re-exports
+  everything from `@vuedo/core` for convenience.
+- **`@vuedo/vue/vite`** — a Vite plugin (`vuedo({ templatesDir, outDir })`):
   auto-discovers template SSR entries for the production build, runs type
   generation, compiles CSS via `@tailwindcss/vite`, and emits
   `pdf-manifest.json`.
@@ -62,18 +74,40 @@ const vuedo = createVuedo({
 });
 ```
 
-## Library Layout (`packages/vuedo/src`)
+## Library Layout
+
+### `packages/core/src` — framework-agnostic primitives
 
 ```
-index.ts            createVuedo() — the only required consumer import
+index.ts            re-exports all primitives
+cache/              pluggable cache backends
+  index.ts          re-exports
+  types.ts          Cache abstract class + DEFAULT_TTL_MS
+  memory.ts         InMemoryCache
+  redis.ts          RedisCache
+  noop.ts           NoopCache
+drivers/            pluggable PDF backends
+  index.ts          re-exports
+  types.ts          PdfDriver abstract class + DriverRenderInput
+  gotenberg.ts      GotenbergDriver — remote Chromium service
+  chromium.ts       ChromiumDriver — local/remote Puppeteer
+  measurement.ts    ChromiumMeasurer + PuppeteerMeasurer + resolveMargins
+html.ts             wrapBody() / wrapHeader() / wrapFooter() document shells
+inline-assets.ts    inlineAssetsPlugin() + inlineCssAssets() + inlineHtmlAssets()
+preview.ts          buildPreviewHtml() + PAPER_SIZES
+```
+
+### `packages/vue/src` — Vue adapter (@vuedo/vue)
+
+```
+index.ts            createVuedo() — the only required consumer import;
+                    re-exports everything from @vuedo/core for convenience
 renderer.ts         dev vs. prod render strategy (devServer-based in dev, manifest-based in prod)
-discover.ts         file-based layout discovery (body + paired header/footer)
+discover.ts         .vue file-based layout discovery (body + paired header/footer)
 manifest.ts         writeManifest / loadManifest (entries + layouts)
 render-component.ts  shared Vue SSR (createSSRApp + renderToString)
-gotenberg.ts        Gotenberg HTTP client (returns a ReadableStream)
-html.ts             wrapBody() / wrapHeader() / wrapFooter() document shells
 types.ts            generateTypes() — emits the inferred VuedoProps
-vite-plugin.ts      exported as '@hshm/vuedo/vite'
+vite-plugin.ts      exported as '@vuedo/vue/vite'
 ```
 
 No `cli.ts` or `dev-registry.ts` — these have been removed.
@@ -89,7 +123,7 @@ templates/         Vue SFCs — the PDF templates (file-based layout convention,
   pos/pos-order.vue   nested body
   pos/pos-header.vue  header (auto-pairs with pos.pos-order via folder convention)
 assets/            static assets referenced by templates (images + fonts, base64-inlined)
-  app.css           Tailwind v4 entry — compiled by @hshm/vuedo itself (no build step in the service)
+  app.css           Tailwind v4 entry — compiled by @vuedo/vue itself (no build step in the service)
   logo.png
   fonts/            custom .woff2/.ttf files (referenced from app.css @font-face)
 .vuedo/           AUTO-GENERATED dev artifacts (compiled CSS, etc.) — gitignored, see ".vuedo Dev Folder"
@@ -107,7 +141,7 @@ The `.vuedo/` directory (at the consumer's project root, gitignored) holds
 auto-generated artifacts used only during development:
 
 - **`vuedo.css`** — the compiled Tailwind v4 CSS produced by the
-  `@tailwindcss/vite` plugin during `vite dev`. The `@hshm/vuedo/vite` plugin
+  `@tailwindcss/vite` plugin during `vite dev`. The `@vuedo/vue/vite` plugin
   watches the CSS entry (`assets/app.css`) and templates, and on each change
   re-compiles the CSS and writes it here. `createVuedo()` reads it from this
   path in dev mode.
@@ -115,7 +149,7 @@ auto-generated artifacts used only during development:
 ## File-Based Layout Convention
 
 There is **no** `header`/`footer` field on the request. Layout is inferred from
-the template filenames (`packages/vuedo/src/discover.ts`):
+the template filenames (`packages/vue/src/discover.ts`):
 
 - `X.vue` → a **body** template named `X`.
 - `XHeader.vue` / `XFooter.vue` in the **same folder** → paired with `X`
@@ -163,20 +197,24 @@ props via Volar. The generated file is gitignored (`src/generated/`).
 ## Commands
 
 - `pnpm install` — install all workspace deps
-- `pnpm --filter @hshm/vuedo build` — compile the library to `packages/vuedo/dist`
-  (**do this first** — the example service and its Vite config import the built lib)
+- `pnpm --filter @vuedo/core build` — compile the core library to
+  `packages/core/dist`
+- `pnpm --filter @vuedo/vue build` — compile the Vue adapter to
+  `packages/vue/dist` (**do this first** — the example service and its Vite
+  config import the built lib)
 - `pnpm dev` (root) — uses `turbo` to build the library first (from cache if
   unchanged) then runs the Elysia server (`:8080`) with `tsx watch`. The server
   creates a Vite dev server in middleware mode, which triggers the
-  `@hshm/vuedo/vite` plugin's `configureServer` for CSS compilation, type
+  `@vuedo/vue/vite` plugin's `configureServer` for CSS compilation, type
   generation, and template watching. Tailwind is compiled by the package from
   `assets/app.css` at render time and written to `.vuedo/vuedo.css`.
-- `pnpm build` (root) — `turbo build` => builds the library first (`tsc`) then
-  `vite build` in the example with the `vuedo` plugin → `dist/` +
-  `pdf-manifest.json` + `src/generated/vuedo.d.ts`. Both are cached by turbo.
+- `pnpm build` (root) — `turbo build` => builds core first (`tsc`), then
+  the vue adapter (`tsc`), then `vite build` in the example with the `vuedo`
+  plugin → `dist/` + `pdf-manifest.json` + `src/generated/vuedo.d.ts`. All
+  cached by turbo.
 - `pnpm start` (root) — `NODE_ENV=production` server, reads the manifest
 - `pnpm typecheck` (root) — `vue-tsc --noEmit` via turbo (validates generated props)
-- `pnpm test` (root) — `vitest run` in both packages via turbo (build deps resolved
+- `pnpm test` (root) — `vitest run` in all packages via turbo (build deps resolved
   and cached automatically).
 
 ## Changelog (`CHANGELOG.md`)
@@ -193,8 +231,8 @@ Rules:
   `Removed`, `Fixed`, `Security`. Use sentence case, and describe the change from
   the user's/consumer's perspective (not implementation trivia).
 - Every entry is a succinct bullet. Prefix with a package/scope where useful
-  (e.g. `**vuedo:**`, `**docs:**`, `**server:**`). Reference PRs/issues as
-  `(#123)` where known.
+  (e.g. `**vue:**`, `**core:**`, `**docs:**`, `**server:**`). Reference
+  PRs/issues as `(#123)` where known.
 - When a release is cut, rename `[Unreleased]` to the new semver version
   (e.g. `## [1.2.0] - 2026-07-16`), add a comparison link at the bottom
   (`[1.2.0]: https://github.com/hshm/vuedo/compare/v1.1.0...v1.2.0`), and open a
@@ -219,7 +257,7 @@ Rules:
   options }` payload per template at the edge.
 - **Styling**: templates use Tailwind utility classes. `app.css` (`@import
   "tailwindcss";`) is compiled by the `@tailwindcss/vite` Vite plugin, included
-  in the consumer's Vite config. The `@hshm/vuedo/vite` plugin's
+  in the consumer's Vite config. The `@vuedo/vue/vite` plugin's
   `configureServer` writes compiled CSS to `.vuedo/vuedo.css` on file changes;
   `createVuedo()` reads it and inlines it into every rendered section.
 - All assets inline as Base64 (no runtime network fetches): imported images/fonts
@@ -244,7 +282,11 @@ Rules:
 
 ## Testing Notes (§7)
 
-- **Library** (`packages/vuedo/test`): `discover.test.ts` (recursive pairing +
+- **Core** (`packages/core/test`): `cache.test.ts` (all cache backends),
+  `drivers.test.ts` (PdfDriver + Gotenberg mock), `chromium-driver.test.ts`
+  (ChromiumDriver with mocked Puppeteer), `measurement.test.ts` (withTimeout,
+  PuppeteerMeasurer, resolveMargins + caching).
+- **Vue adapter** (`packages/vue/test`): `discover.test.ts` (recursive pairing +
   dotted names), `types.test.ts` (generated `VuedoProps`), `dev.test.ts`
   drives `createVuedo` in development mode covering both paths — with an explicit
   `devServer` (for lifecycle control) and without (library auto-creates from
@@ -252,8 +294,10 @@ Rules:
   Vite plugin then renders via the manifest in production mode.
 - **Consumer** (`examples/vue/test`): `app.test.ts` hits each typed Elysia route with
   `?preview=html` (no Gotenberg) and checks TypeBox validation (422 on a missing
-  required section); `pdf.e2e.test.ts` builds `dist/`, renders through **real
-  Gotenberg**, and parses the PDF with `pdf-parse`. Both skip automatically when
-  Gotenberg is unreachable — bring it up with `pnpm infra:up`.
+  required section); `invoice.e2e.test.ts`, `pos-order.e2e.test.ts`,
+  `measurement.e2e.test.ts` build `dist/`, render through **real
+  Gotenberg** (and Browserless for measurement), and parse the PDF with
+  `pdf-parse`. All e2e tests skip automatically when Gotenberg/Browserless are
+  unreachable — bring them up with `pnpm infra:up`.
 - Turbo caches test results — re-running `pnpm test` after no source changes
   replays from cache in milliseconds.

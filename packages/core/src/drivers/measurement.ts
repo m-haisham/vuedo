@@ -84,7 +84,6 @@ export class PuppeteerMeasurer extends ChromiumMeasurer {
       viewportWidthPx ?? Math.round(DEFAULT_PAPER_WIDTH_INCHES * PX_PER_INCH);
     const browser = await this.driver.getBrowser();
     const page = await browser.newPage();
-    // TODO: Move timeout into this so that we can handle page.close() on timeout.
     try {
       await page.setViewport({ width, height: 3000 });
       await page.setContent(html, { waitUntil: "networkidle0" });
@@ -97,7 +96,6 @@ export class PuppeteerMeasurer extends ChromiumMeasurer {
       console.error(
         `[${this.name}] Failed to measure HTML snippet — returning 0 height`,
       );
-
       return 0;
     } finally {
       await page.close();

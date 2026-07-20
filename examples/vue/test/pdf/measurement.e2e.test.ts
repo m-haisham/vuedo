@@ -8,7 +8,7 @@ import {
   PuppeteerMeasurer,
   resolveMargins,
   NoopCache,
-} from "@hshm/vuedo";
+} from "@vuedo/vue";
 import pdfParse from "pdf-parse";
 
 // E2E tests for pre-flight DOM measurement: exercises PuppeteerMeasurer against

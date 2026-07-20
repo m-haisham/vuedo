@@ -108,7 +108,6 @@ describe("InMemoryCache", () => {
 
   it("default ttl is 1 hour", async () => {
     await cache.set("persist", "here");
-    // Should still be present within the default window
     expect(await cache.get("persist")).toBe("here");
   });
 
@@ -142,12 +141,10 @@ describe("RedisCache", () => {
     client = {
       get: vi.fn(async (key: string) => store.get(key) ?? null),
       set: vi.fn(async (key: string, value: string, ...args: string[]) => {
-        // "PX" <ms> — parse TTL and store with expiry marker
         const pxIdx = args.indexOf("PX");
         if (pxIdx !== -1) {
           const ttl = parseInt(args[pxIdx + 1], 10);
           store.set(key, value);
-          // Simulate expiry by scheduling deletion
           setTimeout(() => store.delete(key), ttl);
         } else {
           store.set(key, value);
@@ -197,7 +194,6 @@ describe("RedisCache", () => {
   it("clear() is a no-op (does not throw)", async () => {
     await cache.set("a", "1");
     await cache.clear();
-    // clear is intentionally a no-op per the RedisCache contract
     expect(await cache.get("a")).toBe("1");
   });
 

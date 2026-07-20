@@ -8,7 +8,7 @@ import {
   InMemoryCache,
   PuppeteerMeasurer,
   type PaperSize,
-} from "@hshm/vuedo";
+} from "@vuedo/vue";
 import { openapi } from "@elysiajs/openapi";
 import type { VuedoProps } from "./generated/vuedo";
 
@@ -177,7 +177,7 @@ export const app = new Elysia({ adapter: node() })
           title: "vuedo PDF Service",
           version: "1.0.0",
           description:
-            "A small example consumer of `@hshm/vuedo` that turns Vue + " +
+            "A small example consumer of `@vuedo/vue` that turns Vue + " +
             "Tailwind templates into PDFs via Gotenberg. Each PDF is its own " +
             "typed route. Send the `{ header?, body, footer?, options }` " +
             "payload as JSON; add `?preview=html` to get the composed SSR " +

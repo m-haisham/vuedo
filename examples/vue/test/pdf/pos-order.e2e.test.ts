@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { execSync } from "node:child_process";
 import path from "node:path";
-import { createVuedo, GotenbergDriver } from "@hshm/vuedo";
+import { createVuedo, GotenbergDriver } from "@vuedo/vue";
 import pdfParse from "pdf-parse";
 
 // Per-template E2E for the `pos.pos-order` (POS receipt) PDF (§7): exercise the

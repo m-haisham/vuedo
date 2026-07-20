@@ -1,11 +1,12 @@
-# Architecture & Technical Specification: `@hshm/vuedo`
+# Architecture & Technical Specification: `@vuedo/core` + `@vuedo/vue`
 
 ## 1. Executive Summary
 
-This document specifies `@hshm/vuedo` — a library, not a service. Consumers keep their own HTTP server (Elysia, Express, Fastify, Hono, whatever) and their own routes. The package does the nitty-gritty — Vue SSR compilation of print templates, dev-mode live compilation via the consumer's Vite dev server, Gotenberg orchestration, layout-measurement caching — behind two exports:
+This document specifies the `@vuedo` packages — a set of libraries, not a service. Consumers keep their own HTTP server (Elysia, Express, Fastify, Hono, whatever) and their own routes. The packages handle the nitty-gritty — framework-level SSR compilation of print templates, dev-mode live compilation via the consumer's Vite dev server, Gotenberg orchestration, layout-measurement caching — behind three exports:
 
-- **`@hshm/vuedo`** — the core: `createVuedo()`, returns `renderHtml()` / `generatePdf()`. Framework-agnostic; the consumer calls these from inside whatever route handler they already have.
-- **`@hshm/vuedo/vite`** — a Vite plugin. Handles SSR build configuration (auto-discovers template entries), dev-mode preview middleware, type generation, and `closeBundle` manifest emission.
+- **`@vuedo/core`** — framework-agnostic primitives: PDF drivers (Gotenberg, Chromium), HTML document-shell wrappers, asset-inlining utilities, live-preview page builder, pluggable cache backends, and measurement with caching. Designed to be reused by framework adapters.
+- **`@vuedo/vue`** — the Vue adapter built on `@vuedo/core`: `createVuedo()`, returns `renderHtml()` / `generatePdf()`. Re-exports everything from `@vuedo/core` for convenience.
+- **`@vuedo/vue/vite`** — a Vite plugin. Handles SSR build configuration (auto-discovers template entries), dev-mode preview middleware, type generation, and `closeBundle` manifest emission.
 
 There is no CLI. The Vite plugin is the sole build path — every consumer runs `vite build` (their own, with the plugin in their config). Dev mode follows the standard Vite SSR pattern: `devServer` is optional — when omitted, the library lazy-creates a Vite server from the consumer's `vite.config.ts` and closes it on `vuedo.close()`.
 
@@ -24,7 +25,7 @@ There is no CLI. The Vite plugin is the sole build path — every consumer runs 
                                │
                                ▼
                ┌───────────────────────────────┐
-               │   @hshm/vuedo (library)    │
+               │   @vuedo/vue (library)    │
                │   createVuedo({ ... })         │
                │   • renderHtml()  — Vue → HTML  │
                │   • generatePdf() — + Gotenberg │
@@ -46,7 +47,7 @@ Unchanged from the original spec: web technologies (flexbox, grid, reactive data
 
 ### 3.2 Library, Not a Service
 
-**Decision:** Ship `@hshm/vuedo` as an npm package the consumer installs into their own backend, rather than a standalone microservice they deploy and call over HTTP.
+**Decision:** Ship `@vuedo/vue` as an npm package the consumer installs into their own backend, rather than a standalone microservice they deploy and call over HTTP.
 
 **Justification:** The previous design forced every consumer to run a second network hop (their app → the PDF service → Gotenberg) and to duplicate auth/routing concerns across two codebases. As a library, template rendering happens in-process; only the actual PDF conversion (which genuinely needs headless Chromium) leaves the process, to Gotenberg. The consumer's own router, middleware, and auth apply naturally — `vuedo` never has an opinion about how the route is protected or shaped.
 
@@ -62,7 +63,7 @@ Assets stay Base64-inlined into the SSR HTML string per the original spec — de
 
 ### 3.5 Tailwind v4 via `@tailwindcss/vite`
 
-**Decision:** Tailwind CSS is compiled via the `@tailwindcss/vite` Vite plugin, included in the consumer's Vite config. During `vite dev`, the `@hshm/vuedo/vite` plugin's `configureServer` watch compiles CSS on file changes and writes it to `.vuedo/vuedo.css`. During `vite build`, the `closeBundle` hook compiles the final CSS to `<outDir>/vuedo.css`. At runtime, `createVuedo()` reads the pre-compiled CSS and inlines it into every rendered section.
+**Decision:** Tailwind CSS is compiled via the `@tailwindcss/vite` Vite plugin, included in the consumer's Vite config. During `vite dev`, the `@vuedo/vue/vite` plugin's `configureServer` watch compiles CSS on file changes and writes it to `.vuedo/vuedo.css`. During `vite build`, the `closeBundle` hook compiles the final CSS to `<outDir>/vuedo.css`. At runtime, `createVuedo()` reads the pre-compiled CSS and inlines it into every rendered section.
 
 **Justification:** Using the standard `@tailwindcss/vite` plugin gives consumers a standard Vite CSS pipeline — they can import UI libraries, use `@source` directives, and get behaviour identical to their own Vite-based apps.
 
@@ -72,36 +73,36 @@ Assets stay Base64-inlined into the SSR HTML string per the original spec — de
 
 The `.vuedo/` directory at the consumer's project root holds auto-generated artifacts used **only during development**. These files are gitignored and never shipped to production.
 
-- **`vuedo.css`** — the compiled Tailwind v4 CSS, written by the `@hshm/vuedo/vite` plugin's `configureServer` watch. `createVuedo()` reads it from this path in dev mode.
+- **`vuedo.css`** — the compiled Tailwind v4 CSS, written by the `@vuedo/vue/vite` plugin's `configureServer` watch. `createVuedo()` reads it from this path in dev mode.
 
 ### 4.1 Package Layout
 
 ```
-@hshm/vuedo/
-├── src/
-│   ├── index.ts          # createVuedo() — the only required import for consumers
-│   ├── renderer.ts        # dev vs. prod render strategy (see below)
-│   ├── discover.ts         # file-based layout discovery (body + paired header/footer)
-│   ├── manifest.ts         # reads pdf-manifest.json written by the plugin at build time
-│   ├── html.ts             # wrapBody / wrapHeader / wrapFooter document shells
-│   ├── types.ts            # generateTypes() — emits the inferred VuedoProps
-│   ├── drivers/            # pluggable PDF backends
-│   │   ├── types.ts         # PdfDriver abstract class + DriverRenderInput
-│   │   ├── gotenberg.ts     # GotenbergDriver — remote Chromium service
-│   │   ├── chromium.ts      # ChromiumDriver — local Puppeteer
-│   │   ├── measurement.ts   # ChromiumMeasurer + resolveMargins
-│   │   └── index.ts         # re-exports
-│   ├── cache/               # pluggable cache backends
-│   ├── inline-assets.ts     # Vite plugin for Base64 asset inlining
-│   ├── render-component.ts  # shared Vue SSR (createSSRApp + renderToString)
-│   └── vite-plugin.ts      # exported as '@hshm/vuedo/vite'
+@vuedo/core/                          @vuedo/vue/
+├── src/                              ├── src/
+│   ├── index.ts      # re-exports    │   ├── index.ts      # createVuedo()
+│   ├── cache/        # Cache etc.    │   ├── renderer.ts    # dev vs. prod
+│   ├── drivers/      # PdfDriver etc.│   ├── discover.ts    # .vue discovery
+│   │   ├── types.ts                  │   ├── manifest.ts    # manifest I/O
+│   │   ├── gotenberg.ts              │   ├── render-component.ts
+│   │   ├── chromium.ts               │   ├── types.ts       # type generation
+│   │   └── measurement.ts            │   └── vite-plugin.ts # @vuedo/vue/vite
+│   ├── html.ts                       ├── package.json
+│   ├── inline-assets.ts              └── tsconfig.json
+│   └── preview.ts
 ├── package.json
+└── tsconfig.json
 ```
 
 ```json
-// package.json (exports map)
+// @vuedo/core — framework-agnostic primitives (no exports map needed for inner dep)
 {
-  "name": "@hshm/vuedo",
+  "name": "@vuedo/core"
+}
+
+// @vuedo/vue — the Vue adapter, re-exports core + adds createVuedo()
+{
+  "name": "@vuedo/vue",
   "exports": {
     ".": "./dist/index.js",
     "./vite": "./dist/vite-plugin.js"
@@ -120,7 +121,8 @@ The `.vuedo/` directory at the consumer's project root holds auto-generated arti
 ### 4.2 Core API
 
 ```ts
-// @hshm/vuedo
+// @vuedo/vue — the main consumer-facing import
+// (re-exports everything from @vuedo/core + adds createVuedo)
 export interface VuedoOptions {
   templatesDir?: string;         // absolute path to the folder of .vue templates
   driver?: PdfDriver;            // required — the PDF backend
@@ -243,7 +245,7 @@ The consumer adds the vuedo plugin to their `vite.config.ts`:
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
-import { vuedo } from '@hshm/vuedo/vite';
+import { vuedo } from '@vuedo/vue/vite';
 
 export default defineConfig({
   plugins: [
@@ -286,7 +288,7 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
 
 ```ts
 // Elysia — devServer is optional; library auto-creates from vite.config.ts
-import { createVuedo, GotenbergDriver } from '@hshm/vuedo';
+import { createVuedo, GotenbergDriver } from '@vuedo/vue';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -332,5 +334,7 @@ services:
 
 Two layers:
 
-- **Library tests** (in `@hshm/vuedo`'s repo): Vitest exercises `createVuedo()` directly against fixture templates, in `mode: 'development'` (creating an explicit Vite server and asserting `ssrLoadModule` is used) and `mode: 'production'` (asserting the manifest path is read with no Vite involved).
+- **Core library tests** (in `@vuedo/core`'s repo): Vitest exercises cache backends, driver abstractions, ChromiumDriver with mocked Puppeteer, and measurement/caching primitives.
+- **Vue adapter tests** (in `@vuedo/vue`'s repo): Vitest exercises `createVuedo()` directly against fixture templates, in `mode: 'development'` (creating an explicit Vite server and asserting `ssrLoadModule` is used) and `mode: 'production'` (asserting the manifest path is read with no Vite involved).
+- **Consumer tests**: `supertest`-style requests against the consumer's own router, asserting the route returns `Content-Type: application/pdf` and that `pdf-parse` can read the resulting buffer.
 - **Consumer tests**: `supertest`-style requests against the consumer's own router, asserting the route returns `Content-Type: application/pdf` and that `pdf-parse` can read the resulting buffer.

@@ -89,5 +89,3 @@ export function wrapFooter(content: string, css = ""): string {
   const style = css ? `<style>${css}</style>` : "";
   return `<!DOCTYPE html><html><head><meta charset="utf-8">${reset}${style}</head><body>${content}</body></html>`;
 }
-
-
