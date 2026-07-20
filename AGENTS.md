@@ -2,6 +2,8 @@
 
 Guidance for AI agents and contributors working in this repository.
 
+**Keep this file and [`docs/reference.md`](docs/reference.md) in sync** — when you update one, update the other. When code or behaviour changes, update both.
+
 ## Project Overview
 
 This is a **pnpm workspace** with two parts:
@@ -226,6 +228,19 @@ Rules:
 - The library must never import `vite` at module top level (only dynamically or
   via type imports) so the optional-peer-dependency guarantee holds.
   `vite-plugin.ts` uses `import type` only.
+
+## Naming Conventions
+
+- **Reveal intent, skip type hints**: `items: string[]`, not `itemsArray`. Name says what it *is for*, not its shape.
+- **Casing**: `camelCase` for variables/functions, `PascalCase` for types/interfaces/classes/components, `SCREAMING_SNAKE_CASE` for module-level constants and env vars. Don't prefix interfaces with `I`.
+- **Booleans read as predicates**: `isActive`, `hasPermission`, `canEdit` — never bare adjectives (`active`) or negated forms (`isNotValid`).
+- **Async functions get a verb**: `fetchUser()` not `user()`. Mutators are imperative (`sortItems`), pure derivations are noun-ish (`sortedItems`).
+- **No vague catch-alls** (`data`, `temp`, `value`, `result`, `obj`) except as a genuine last resort — even then, scope it (`rawResponseData` beats `data`).
+- **Short names only in short scopes**: `i`/`x`/`row` are fine in a 3-line loop, never past a function boundary.
+- **One name per concept, everywhere**: don't alternate `user`/`customer`/`client` for the same entity across files.
+- **Use the project's domain terms**, not generic synonyms — if the product says "booking," the code says `booking`, not `reservation`.
+- **No shadowing**: don't reuse a name for a different purpose in a nested scope, even if TS allows it.
+- **Singular/plural must match cardinality**: a single item is never named `items`.
 
 ## Testing Notes (§7)
 
