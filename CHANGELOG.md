@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **core:** Added npm publish metadata (license, repository, bugs, homepage, keywords, engines, publishConfig) to `@pandaf/core/package.json`
+- **vue:** Added npm publish metadata (license, repository, bugs, homepage, keywords, engines, publishConfig) to `@pandaf/vue/package.json`
+- **react:** Added npm publish metadata (license, repository, bugs, homepage, keywords, engines, publishConfig) to `@pandaf/react/package.json`
+- **repo:** Fixed root `package.json` license field from `ISC` to `MIT` to match the `LICENSE` file
+
 - **react:** New `@pandaf/react` package — a React adapter built on `@pandaf/core`,
   exposing `createPandaf()` for React SSR → PDF generation. Supports React 18+
   with `react-dom/server` rendering.

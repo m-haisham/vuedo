@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Vue SSR → PDF generation — monorepo",
-  "license": "ISC",
+  "license": "MIT",
   "packageManager": "pnpm@10.14.0",
   "pnpm": {
     "overrides": {

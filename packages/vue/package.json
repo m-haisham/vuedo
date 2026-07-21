@@ -2,6 +2,7 @@
   "name": "@pandaf/vue",
   "version": "0.1.0",
   "description": "Vue SSR → PDF generation using @pandaf/core",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,6 +19,31 @@
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/m-haisham/vuedo.git",
+    "directory": "packages/vue"
+  },
+  "bugs": {
+    "url": "https://github.com/m-haisham/vuedo/issues"
+  },
+  "homepage": "https://github.com/m-haisham/vuedo#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "vue",
+    "pdf",
+    "pdf-generation",
+    "vue-ssr",
+    "gotenberg",
+    "puppeteer",
+    "vite"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "dev": "tsc --watch",
     "build": "tsc",

@@ -12,7 +12,13 @@ This library primarily targets to eliminate all the small friction points that c
 
 ## Getting Started
 
-This library is not yet published to npm, I am not sure if it can be used in its current state yet. Right now its just coupled to an example project that uses elysia as the backend. The example project is located at `examples/vue/`. You can run the example project by running the following command:
+Install the Vue adapter and its core primitives:
+
+```bash
+pnpm add @pandaf/vue
+```
+
+See the `examples/vue/` directory for a complete Elysia backend that uses `@pandaf/vue` to render and serve PDFs. You can run it locally with:
 
 ```bash
 pnpm install
