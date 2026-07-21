@@ -23,12 +23,12 @@ importers:
       '@elysiajs/openapi':
         specifier: ^1.4.15
         version: 1.4.15(elysia@1.4.29(@sinclair/typebox@0.34.52)(exact-mirror@1.2.2)(file-type@22.0.1)(openapi-types@12.1.3)(typescript@5.9.3))
+      '@pandaf/react':
+        specifier: workspace:*
+        version: link:../../packages/react
       '@tailwindcss/vite':
         specifier: ^4.0.0
         version: 4.3.3(vite@5.4.21(@types/node@20.19.43)(lightningcss@1.32.0))
-      '@vuedo/react':
-        specifier: workspace:*
-        version: link:../../packages/react
       elysia:
         specifier: ^1.0.0
         version: 1.4.29(@sinclair/typebox@0.34.52)(exact-mirror@1.2.2)(file-type@22.0.1)(openapi-types@12.1.3)(typescript@5.9.3)
@@ -81,12 +81,12 @@ importers:
       '@elysiajs/openapi':
         specifier: ^1.4.15
         version: 1.4.15(elysia@1.4.29(@sinclair/typebox@0.34.52)(exact-mirror@1.2.2)(file-type@22.0.1)(openapi-types@12.1.3)(typescript@5.9.3))
+      '@pandaf/vue':
+        specifier: workspace:*
+        version: link:../../packages/vue
       '@tailwindcss/vite':
         specifier: ^4.0.0
         version: 4.3.3(vite@5.4.21(@types/node@20.19.43)(lightningcss@1.32.0))
-      '@vuedo/vue':
-        specifier: workspace:*
-        version: link:../../packages/vue
       elysia:
         specifier: ^1.0.0
         version: 1.4.29(@sinclair/typebox@0.34.52)(exact-mirror@1.2.2)(file-type@22.0.1)(openapi-types@12.1.3)(typescript@5.9.3)
@@ -152,15 +152,15 @@ importers:
 
   packages/react:
     dependencies:
+      '@pandaf/core':
+        specifier: workspace:*
+        version: link:../core
       '@tailwindcss/vite':
         specifier: ^4.0.0
         version: 4.3.3(vite@5.4.21(@types/node@20.19.43)(lightningcss@1.32.0))
       '@vitejs/plugin-react':
         specifier: ^4.0.0
         version: 4.7.0(vite@5.4.21(@types/node@20.19.43)(lightningcss@1.32.0))
-      '@vuedo/core':
-        specifier: workspace:*
-        version: link:../core
       puppeteer:
         specifier: ^23.0.0
         version: 23.11.1(typescript@5.9.3)
@@ -195,6 +195,9 @@ importers:
 
   packages/vue:
     dependencies:
+      '@pandaf/core':
+        specifier: workspace:*
+        version: link:../core
       '@tailwindcss/vite':
         specifier: ^4.0.0
         version: 4.3.3(vite@5.4.21(@types/node@20.19.43)(lightningcss@1.32.0))
@@ -204,9 +207,6 @@ importers:
       '@vue/server-renderer':
         specifier: ^3.4.0
         version: 3.5.39(vue@3.5.39(typescript@5.9.3))
-      '@vuedo/core':
-        specifier: workspace:*
-        version: link:../core
       puppeteer:
         specifier: ^23.0.0
         version: 23.11.1(typescript@5.9.3)

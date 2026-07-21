@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { execSync } from "node:child_process";
 import path from "node:path";
-import { createVuedo, GotenbergDriver } from "@vuedo/react";
-import type { VuedoProps } from "../../src/generated/vuedo";
+import { createPandaf, GotenbergDriver } from "@pandaf/react";
+import type { PandafProps } from "../../src/generated/pandaf";
 import pdfParse from "pdf-parse";
 
 const GOTENBERG_URL = process.env.GOTENBERG_URL || "http://localhost:3000";
@@ -33,12 +33,12 @@ describe.skipIf(!gotenbergAvailable)(
     }, 120_000);
 
     it("renders body + auto-paired header/footer and returns a real PDF", async () => {
-      const kit = createVuedo<VuedoProps>({
+      const kit = createPandaf<PandafProps>({
         templatesDir: path.resolve("templates"),
         driver: new GotenbergDriver(GOTENBERG_URL),
         mode: "production",
         manifestPath: path.resolve("dist/pdf-manifest.json"),
-        css: path.resolve("dist/vuedo.css"),
+        css: path.resolve("dist/pandaf.css"),
       });
 
       const stream = await kit.generatePdf("pos.pos-order", {

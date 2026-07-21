@@ -2,13 +2,13 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import {
-  createVuedo,
+  createPandaf,
   GotenbergDriver,
   ChromiumDriver,
   PuppeteerMeasurer,
   resolveMargins,
   NoopCache,
-} from "@vuedo/vue";
+} from "@pandaf/vue";
 import pdfParse from "pdf-parse";
 
 // E2E tests for pre-flight DOM measurement: exercises PuppeteerMeasurer against
@@ -191,12 +191,12 @@ describe.skipIf(!browserlessAvailable || !gotenbergAvailable)(
       const driver = new ChromiumDriver({ browserWSEndpoint: BROWSERLESS_URL });
       const measurer = new PuppeteerMeasurer(driver);
 
-      const kit = createVuedo({
+      const kit = createPandaf({
         templatesDir: path.resolve("templates"),
         driver: new GotenbergDriver(GOTENBERG_URL),
         mode: "production",
         manifestPath: path.resolve("dist/pdf-manifest.json"),
-        css: path.resolve("dist/vuedo.css"),
+        css: path.resolve("dist/pandaf.css"),
         measurer,
       });
 
@@ -237,12 +237,12 @@ describe.skipIf(!browserlessAvailable || !gotenbergAvailable)(
       const driver = new ChromiumDriver({ browserWSEndpoint: BROWSERLESS_URL });
       const measurer = new PuppeteerMeasurer(driver);
 
-      const kit = createVuedo({
+      const kit = createPandaf({
         templatesDir: path.resolve("templates"),
         driver: new GotenbergDriver(GOTENBERG_URL),
         mode: "production",
         manifestPath: path.resolve("dist/pdf-manifest.json"),
-        css: path.resolve("dist/vuedo.css"),
+        css: path.resolve("dist/pandaf.css"),
         measurer,
       });
 

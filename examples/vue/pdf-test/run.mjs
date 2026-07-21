@@ -1,5 +1,5 @@
 /**
- * Standalone Gotenberg smoke test — plain HTML files, no @vuedo/vue.
+ * Standalone Gotenberg smoke test — plain HTML files, no @pandaf/vue.
  *
  * Posts header.html, body.html, footer.html to Gotenberg's Chromium HTML
  * route and writes a PDF. Also renders body-only to compare.

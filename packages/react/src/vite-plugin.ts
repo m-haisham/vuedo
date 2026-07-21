@@ -4,21 +4,21 @@ import type { Plugin } from "vite";
 import { discoverLayouts } from "./discover.js";
 import { writeManifest } from "./manifest.js";
 import { generateTypes } from "./types.js";
-import { inlineAssetsPlugin, buildPreviewHtml, type PaperSize } from "@vuedo/core";
+import { inlineAssetsPlugin, buildPreviewHtml, type PaperSize } from "@pandaf/core";
 import { renderComponent, renderNamedComponent, type TemplateModule } from "./render-component.js";
-import { getVitePort, resolvePluginOpts, type VuedoPluginOptions } from "@vuedo/core";
+import { getVitePort, resolvePluginOpts, type PandafPluginOptions } from "@pandaf/core";
 
-export type { VuedoPluginOptions };
+export type { PandafPluginOptions };
 
-export function vuedo(opts: VuedoPluginOptions): Plugin {
+export function pandaf(opts: PandafPluginOptions): Plugin {
   const { outDir, typesOut, cssEntry, cssDevOut } = resolvePluginOpts(opts);
 
   const previewEnabled =
     opts.preview !== undefined && opts.preview !== false;
   const previewBase =
     opts.preview === true || typeof opts.preview === "boolean"
-      ? "/__vuedo"
-      : (opts.preview?.basePath ?? "/__vuedo");
+      ? "/__pandaf"
+      : (opts.preview?.basePath ?? "/__pandaf");
   const defaultPaperSize: PaperSize =
     opts.preview === true || typeof opts.preview === "boolean"
       ? "a4"
@@ -80,7 +80,7 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
   }
 
   return {
-    name: "vuedo",
+    name: "pandaf",
     configureServer(server) {
       void generateTypes(opts.templatesDir, typesOut).catch(() => {});
 
@@ -93,7 +93,7 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
         try {
           server.ws.send({
             type: "custom",
-            event: "vuedo:reload",
+            event: "pandaf:reload",
             data: {},
           });
         } catch {
@@ -187,11 +187,11 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
 
             const sections = [
               header
-                ? '<div class="vuedo-header">' + header + "</div>"
+                ? '<div class="pandaf-header">' + header + "</div>"
                 : "",
-              '<div class="vuedo-body">' + body + "</div>",
+              '<div class="pandaf-body">' + body + "</div>",
               footer
-                ? '<div class="vuedo-footer">' + footer + "</div>"
+                ? '<div class="pandaf-footer">' + footer + "</div>"
                 : "",
             ].join("\n");
 
@@ -217,7 +217,7 @@ export function vuedo(opts: VuedoPluginOptions): Plugin {
             res.setHeader("Content-Type", "text/html; charset=utf-8");
             res.end(html);
           } catch (err) {
-            console.error("[vuedo] Preview error:", err);
+            console.error("[pandaf] Preview error:", err);
             res.statusCode = 500;
             res.end("Preview error: " + String(err));
           }
@@ -266,10 +266,10 @@ async function compileAndSaveCss(
     const css = (mod as { default?: string }).default ?? "";
 
     await fs.mkdir(outDir, { recursive: true });
-    await fs.writeFile(path.resolve(outDir, "vuedo.css"), css);
+    await fs.writeFile(path.resolve(outDir, "pandaf.css"), css);
   } finally {
     await server.close();
   }
 }
 
-export default vuedo;
+export default pandaf;

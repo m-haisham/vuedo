@@ -2,7 +2,7 @@
   "name": "example-vue",
   "version": "1.0.0",
   "private": true,
-  "description": "Example Elysia consumer of @vuedo/vue",
+  "description": "Example Elysia consumer of @pandaf/vue",
   "type": "module",
   "scripts": {
     "dev": "tsx watch --ignore '**/*.timestamp-*.mjs' src/server.ts",
@@ -15,7 +15,7 @@
   "dependencies": {
     "@elysiajs/node": "^1.4.5",
     "@elysiajs/openapi": "^1.4.15",
-    "@vuedo/vue": "workspace:*",
+    "@pandaf/vue": "workspace:*",
     "@tailwindcss/vite": "^4.0.0",
     "elysia": "^1.0.0",
     "vue": "^3.4.0"

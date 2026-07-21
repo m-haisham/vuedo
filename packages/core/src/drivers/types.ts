@@ -1,5 +1,5 @@
 // A PDF driver turns already SSR-rendered, asset-inlined HTML (a body plus
-// optional header/footer documents) into a stream of PDF bytes. Vuedo ships
+// optional header/footer documents) into a stream of PDF bytes. Pandaf ships
 // two drivers — Gotenberg (remote Chromium service) and Chromium (local
 // Puppeteer) — but the interface is intentionally small so additional backends
 // (e.g. a cloud render API, a different headless engine) can be dropped in

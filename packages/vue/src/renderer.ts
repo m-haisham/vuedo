@@ -2,9 +2,9 @@ import path from "node:path";
 import {
   createDevRenderer,
   createProdRenderer,
-  type VuedoRenderer,
+  type PandafRenderer,
   type RenderMod,
-} from "@vuedo/core";
+} from "@pandaf/core";
 import { renderComponent } from "./render-component.js";
 import { discoverLayouts } from "./discover.js";
 import { loadManifest } from "./manifest.js";
@@ -17,7 +17,7 @@ export function createDevRendererEx(
   templatesDir: string,
   devServer?: import("vite").ViteDevServer,
   cssOutput?: string,
-): VuedoRenderer {
+): PandafRenderer {
   return createDevRenderer({
     templatesDir,
     devServer,
@@ -30,7 +30,7 @@ export function createDevRendererEx(
 export function createProdRendererEx(
   manifestPath: string,
   cssOutput: string,
-): VuedoRenderer {
+): PandafRenderer {
   return createProdRenderer({
     manifestPath,
     cssOutput,
@@ -39,4 +39,4 @@ export function createProdRendererEx(
   });
 }
 
-export { type VuedoRenderer };
+export { type PandafRenderer };

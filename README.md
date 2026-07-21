@@ -1,4 +1,4 @@
-# Vuedo
+# Pandaf
 
 Render Vue.js components into PDFs via Gotenberg or Puppeteer. The library is framework-agnostic and can be used in any Node.js service, but the Vite plugin and CLI are Vue-specific.
 

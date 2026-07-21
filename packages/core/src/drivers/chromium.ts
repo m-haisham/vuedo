@@ -109,13 +109,13 @@ export class ChromiumDriver extends PdfDriver {
             const root = document.body;
             if (h) {
               const el = document.createElement("div");
-              el.className = "vuedo-header";
+              el.className = "pandaf-header";
               el.innerHTML = h;
               root.prepend(el);
             }
             if (f) {
               const el = document.createElement("div");
-              el.className = "vuedo-footer";
+              el.className = "pandaf-footer";
               el.innerHTML = f;
               root.append(el);
             }

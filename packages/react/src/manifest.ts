@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { discoverLayouts, type Discovery } from "./discover.js";
-import type { PdfManifest } from "@vuedo/core";
+import type { PdfManifest } from "@pandaf/core";
 
 export type { PdfManifest };
 

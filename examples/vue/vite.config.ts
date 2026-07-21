@@ -1,14 +1,14 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import tailwindcss from "@tailwindcss/vite";
-import { vuedo } from "@vuedo/vue/vite";
+import { pandaf } from "@pandaf/vue/vite";
 import path from "node:path";
 
 export default defineConfig({
   plugins: [
     tailwindcss(),
     vue(),
-    vuedo({
+    pandaf({
       templatesDir: path.resolve("templates"),
       outDir: "dist",
       cssEntry: "assets/app.css",

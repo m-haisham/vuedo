@@ -4,8 +4,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
 import react from "@vitejs/plugin-react";
-import { vuedo } from "../src/vite-plugin.js";
-import { createVuedo, GotenbergDriver } from "../src/index.js";
+import { pandaf } from "../src/vite-plugin.js";
+import { createPandaf, GotenbergDriver } from "../src/index.js";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const templatesDir = path.resolve(dir, "fixtures/templates");
@@ -15,7 +15,7 @@ beforeAll(async () => {
   await build({
     root: templatesDir,
     configFile: false,
-    plugins: [react(), vuedo({ templatesDir, outDir })],
+    plugins: [react(), pandaf({ templatesDir, outDir })],
     build: { outDir },
     logLevel: "warn",
   });
@@ -25,7 +25,7 @@ afterAll(async () => {
   await fs.rm(outDir, { recursive: true, force: true });
 });
 
-describe("createVuedo — production (manifest, compiled module)", () => {
+describe("createPandaf — production (manifest, compiled module)", () => {
   it("writes a pdf-manifest.json with entries + paired layouts", async () => {
     const manifest = JSON.parse(
       await fs.readFile(path.resolve(outDir, "pdf-manifest.json"), "utf8"),
@@ -40,7 +40,7 @@ describe("createVuedo — production (manifest, compiled module)", () => {
   });
 
   it("renders a body + paired header from the manifest", async () => {
-    const kit = createVuedo({
+    const kit = createPandaf({
       templatesDir,
       driver: new GotenbergDriver("http://unused.local"),
       mode: "production",

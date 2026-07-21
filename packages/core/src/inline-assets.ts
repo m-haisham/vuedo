@@ -22,7 +22,7 @@ const MIME: Record<string, string> = {
 // no external asset references — Gotenberg can convert without network access.
 export function inlineAssetsPlugin(): Plugin {
   return {
-    name: "vuedo-inline-assets",
+    name: "pandaf-inline-assets",
     enforce: "pre",
     async load(id) {
       const clean = id.split("?")[0];

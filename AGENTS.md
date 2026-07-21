@@ -8,18 +8,18 @@ Guidance for AI agents and contributors working in this repository.
 
 This is a **pnpm workspace** with three parts:
 
-- **`packages/core`** — `@vuedo/core`, framework-agnostic **primitives**:
+- **`packages/core`** — `@pandaf/core`, framework-agnostic **primitives**:
   pluggable PDF drivers (Gotenberg, Chromium/Puppeteer), header/footer DOM
   measurement with caching, HTML document-shell wrappers, asset-inlining
   utilities, and a live-preview page builder. No framework-specific code —
   designed to be reused by framework adapters.
-- **`packages/vue`** — `@vuedo/vue`, the **Vue adapter** built on
-  `@vuedo/core`: Vue SSR compilation of print templates, file-based layout
+- **`packages/vue`** — `@pandaf/vue`, the **Vue adapter** built on
+  `@pandaf/core`: Vue SSR compilation of print templates, file-based layout
   discovery, dev-mode live compilation via a Vite dev server, type generation,
-  and a Vite plugin. Exposes `createVuedo()` → `renderHtml()` /
+  and a Vite plugin. Exposes `createPandaf()` → `renderHtml()` /
   `generatePdf()`.
 - **`examples/vue`** — an example **consumer**: a plain Elysia backend that
-  installs `@vuedo/vue` (via `workspace:*`) and calls it from its own routes.
+  installs `@pandaf/vue` (via `workspace:*`) and calls it from its own routes.
 
 The authoritative architecture/spec is [`docs/reference.md`](docs/reference.md).
 When in doubt, follow it.
@@ -28,14 +28,14 @@ When in doubt, follow it.
 
 Three exports (see `docs/reference.md` §4):
 
-- **`@vuedo/core`** — framework-agnostic primitives: `PdfDriver`, `GotenbergDriver`,
+- **`@pandaf/core`** — framework-agnostic primitives: `PdfDriver`, `GotenbergDriver`,
   `ChromiumDriver`, `PuppeteerMeasurer`, `resolveMargins`, `Cache`,
   `InMemoryCache`, `RedisCache`, `wrapBody`/`wrapHeader`/`wrapFooter`,
   `inlineAssetsPlugin`, `buildPreviewHtml`, etc.
-- **`@vuedo/vue`** — `createVuedo(options)` returning
+- **`@pandaf/vue`** — `createPandaf(options)` returning
   `{ renderHtml, renderComposite, generatePdf, previewHtml, close }`. Re-exports
-  everything from `@vuedo/core` for convenience.
-- **`@vuedo/vue/vite`** — a Vite plugin (`vuedo({ templatesDir, outDir })`):
+  everything from `@pandaf/core` for convenience.
+- **`@pandaf/vue/vite`** — a Vite plugin (`pandaf({ templatesDir, outDir })`):
   auto-discovers template SSR entries for the production build, runs type
   generation, compiles CSS via `@tailwindcss/vite`, and emits
   `pdf-manifest.json`.
@@ -50,27 +50,27 @@ imports it.
 
 `devServer` is optional. When omitted in dev mode, the library lazy-creates a
 Vite server from the consumer's `vite.config.ts` and closes it on
-`vuedo.close()`. Pass your own `devServer` to control the lifecycle (e.g. for
+`pandaf.close()`. Pass your own `devServer` to control the lifecycle (e.g. for
 testing). In either case the library calls `vite.ssrLoadModule()` for live
 template compilation with HMR. No owned Vite fallback, no shared-instance
 registry — just the standard Vite SSR approach:
 
 ```ts
 // Dev mode — zero-config (library auto-creates from vite.config.ts)
-const vuedo = createVuedo({ templatesDir, driver });
+const pandaf = createPandaf({ templatesDir, driver });
 
 // Dev mode — explicit server (consumer controls lifecycle)
 const devServer = await createServer({
   server: { middlewareMode: true },
   appType: 'custom',
 });
-const vuedo = createVuedo({ templatesDir, driver, devServer });
+const pandaf = createPandaf({ templatesDir, driver, devServer });
 
 // Prod mode
-const vuedo = createVuedo({
+const pandaf = createPandaf({
   templatesDir, driver, mode: 'production',
   manifestPath: './dist/pdf-manifest.json',
-  css: './dist/vuedo.css',
+  css: './dist/pandaf.css',
 });
 ```
 
@@ -97,17 +97,17 @@ inline-assets.ts    inlineAssetsPlugin() + inlineCssAssets() + inlineHtmlAssets(
 preview.ts          buildPreviewHtml() + PAPER_SIZES
 ```
 
-### `packages/vue/src` — Vue adapter (@vuedo/vue)
+### `packages/vue/src` — Vue adapter (@pandaf/vue)
 
 ```
-index.ts            createVuedo() — the only required consumer import;
-                    re-exports everything from @vuedo/core for convenience
+index.ts            createPandaf() — the only required consumer import;
+                    re-exports everything from @pandaf/core for convenience
 renderer.ts         dev vs. prod render strategy (devServer-based in dev, manifest-based in prod)
 discover.ts         .vue file-based layout discovery (body + paired header/footer)
 manifest.ts         writeManifest / loadManifest (entries + layouts)
 render-component.ts  shared Vue SSR (createSSRApp + renderToString)
-types.ts            generateTypes() — emits the inferred VuedoProps
-vite-plugin.ts      exported as '@vuedo/vue/vite'
+types.ts            generateTypes() — emits the inferred PandafProps
+vite-plugin.ts      exported as '@pandaf/vue/vite'
 ```
 
 No `cli.ts` or `dev-registry.ts` — these have been removed.
@@ -126,27 +126,27 @@ templates/         Vue SFCs — the PDF templates (file-based layout convention,
     pos/pos-order.vue   nested body
     pos/pos-header.vue  header (auto-pairs with pos.pos-order via folder convention)
 assets/            static assets referenced by templates (images + fonts, base64-inlined)
-  app.css           Tailwind v4 entry — compiled by @vuedo/vue itself (no build step in the service)
+  app.css           Tailwind v4 entry — compiled by @pandaf/vue itself (no build step in the service)
   logo.png
   fonts/            custom .woff2/.ttf files (referenced from app.css @font-face)
-.vuedo/           AUTO-GENERATED dev artifacts (compiled CSS, etc.) — gitignored, see ".vuedo Dev Folder"
+.pandaf/           AUTO-GENERATED dev artifacts (compiled CSS, etc.) — gitignored, see ".pandaf Dev Folder"
 src/
   server.ts         normal Elysia server (node adapter) — one typed route per template
-  generated/        AUTO-GENERATED VuedoProps (gitignored) — see "Type Generation"
-  vuedo-env.d.ts    shim so `.vue` imports type-check
+  generated/        AUTO-GENERATED PandafProps (gitignored) — see "Type Generation"
+  pandaf-env.d.ts    shim so `.vue` imports type-check
 ```
 
-The consumer creates the Vite dev server in dev mode and passes it to `createVuedo()`.
+The consumer creates the Vite dev server in dev mode and passes it to `createPandaf()`.
 
-## `.vuedo` Dev Folder
+## `.pandaf` Dev Folder
 
-The `.vuedo/` directory (at the consumer's project root, gitignored) holds
+The `.pandaf/` directory (at the consumer's project root, gitignored) holds
 auto-generated artifacts used only during development:
 
-- **`vuedo.css`** — the compiled Tailwind v4 CSS produced by the
-  `@tailwindcss/vite` plugin during `vite dev`. The `@vuedo/vue/vite` plugin
+- **`pandaf.css`** — the compiled Tailwind v4 CSS produced by the
+  `@tailwindcss/vite` plugin during `vite dev`. The `@pandaf/vue/vite` plugin
   watches the CSS entry (`assets/app.css`) and templates, and on each change
-  re-compiles the CSS and writes it here. `createVuedo()` reads it from this
+  re-compiles the CSS and writes it here. `createPandaf()` reads it from this
   path in dev mode.
 
 ## File-Based Layout Convention
@@ -170,7 +170,7 @@ the template filenames (`packages/vue/src/discover.ts`):
   entries). Template names stay clean — `views/invoice.vue` becomes `invoice`,
   not `views.invoice`.
 
-`createVuedo().generatePdf(name, data)` resolves the layout automatically and
+`createPandaf().generatePdf(name, data)` resolves the layout automatically and
 renders body + the paired header/footer. The `data` object carries each
 section's own props, so header/footer are never forced to share the body's data:
 
@@ -189,12 +189,12 @@ key from `data` (and from the generated type) — see "Type Generation".
 
 ## Type Generation
 
-On every `vite build`, the library writes `src/generated/vuedo.d.ts` mapping
+On every `vite build`, the library writes `src/generated/pandaf.d.ts` mapping
 each template name to the **exact** `generatePdf` data shape. Consumers pass it
 to the kit for full type-checking:
 
 ```ts
-const pdf = createVuedo<VuedoProps>({ templatesDir, driver, devServer });
+const pdf = createPandaf<PandafProps>({ templatesDir, driver, devServer });
 pdf.generatePdf("invoice", { header, body, footer, options }); // fully type-checked
 ```
 
@@ -205,20 +205,20 @@ props via Volar. The generated file is gitignored (`src/generated/`).
 ## Commands
 
 - `pnpm install` — install all workspace deps
-- `pnpm --filter @vuedo/core build` — compile the core library to
+- `pnpm --filter @pandaf/core build` — compile the core library to
   `packages/core/dist`
-- `pnpm --filter @vuedo/vue build` — compile the Vue adapter to
+- `pnpm --filter @pandaf/vue build` — compile the Vue adapter to
   `packages/vue/dist` (**do this first** — the example service and its Vite
   config import the built lib)
 - `pnpm dev` (root) — uses `turbo` to build the library first (from cache if
   unchanged) then runs the Elysia server (`:8080`) with `tsx watch`. The server
   creates a Vite dev server in middleware mode, which triggers the
-  `@vuedo/vue/vite` plugin's `configureServer` for CSS compilation, type
+  `@pandaf/vue/vite` plugin's `configureServer` for CSS compilation, type
   generation, and template watching. Tailwind is compiled by the package from
-  `assets/app.css` at render time and written to `.vuedo/vuedo.css`.
+  `assets/app.css` at render time and written to `.pandaf/pandaf.css`.
 - `pnpm build` (root) — `turbo build` => builds core first (`tsc`), then
-  the vue adapter (`tsc`), then `vite build` in the example with the `vuedo`
-  plugin → `dist/` + `pdf-manifest.json` + `src/generated/vuedo.d.ts`. All
+  the vue adapter (`tsc`), then `vite build` in the example with the `pandaf`
+  plugin → `dist/` + `pdf-manifest.json` + `src/generated/pandaf.d.ts`. All
   cached by turbo.
 - `pnpm start` (root) — `NODE_ENV=production` server, reads the manifest
 - `pnpm typecheck` (root) — `vue-tsc --noEmit` via turbo (validates generated props)
@@ -243,10 +243,10 @@ Rules:
   PRs/issues as `(#123)` where known.
 - When a release is cut, rename `[Unreleased]` to the new semver version
   (e.g. `## [1.2.0] - 2026-07-16`), add a comparison link at the bottom
-  (`[1.2.0]: https://github.com/hshm/vuedo/compare/v1.1.0...v1.2.0`), and open a
+  (`[1.2.0]: https://github.com/hshm/pandaf/compare/v1.1.0...v1.2.0`), and open a
   fresh `[Unreleased]` section. Keep versions ordered newest-first.
 - Link the top `[Unreleased]` to the commit stream
-  (`[Unreleased]: https://github.com/hshm/vuedo/commits/main`).
+  (`[Unreleased]: https://github.com/hshm/pandaf/commits/main`).
 - Treat the changelog as a record of **notable** changes: new features, breaking
   changes, bug fixes, deprecations, removals, and security fixes. Do not log
   internal refactors, formatting, or test-only changes.
@@ -256,7 +256,7 @@ Rules:
 - The per-template prop types are **inferred** from the SFCs — do **not** maintain
   a hand-written registry (and there is no `shared-types/` folder). Each consumer
   route hand-writes its own TypeBox `t.Object` schema mirroring the SFC props; the
-  generated `VuedoProps` keeps the `generatePdf` call type-checked.
+  generated `PandafProps` keeps the `generatePdf` call type-checked.
 - New templates: drop a `.vue` file in the consumer's `templatesDir` — that's
   it. `discoverLayouts()` finds them (and pairs headers/footers) for dev
   (`ssrLoadModule`) and build (SSR entry) automatically; no registry to maintain.
@@ -265,9 +265,9 @@ Rules:
   options }` payload per template at the edge.
 - **Styling**: templates use Tailwind utility classes. `app.css` (`@import
   "tailwindcss";`) is compiled by the `@tailwindcss/vite` Vite plugin, included
-  in the consumer's Vite config. The `@vuedo/vue/vite` plugin's
-  `configureServer` writes compiled CSS to `.vuedo/vuedo.css` on file changes;
-  `createVuedo()` reads it and inlines it into every rendered section.
+  in the consumer's Vite config. The `@pandaf/vue/vite` plugin's
+  `configureServer` writes compiled CSS to `.pandaf/pandaf.css` on file changes;
+  `createPandaf()` reads it and inlines it into every rendered section.
 - All assets inline as Base64 (no runtime network fetches): imported images/fonts
   in templates are inlined by the library's `inlineAssetsPlugin` (dev + prod), and
   local `url()` refs in `app.css` are inlined by `inlineCssAssets` before injection.
@@ -295,10 +295,10 @@ Rules:
   (ChromiumDriver with mocked Puppeteer), `measurement.test.ts` (withTimeout,
   PuppeteerMeasurer, resolveMargins + caching).
 - **Vue adapter** (`packages/vue/test`): `discover.test.ts` (recursive pairing +
-  dotted names), `types.test.ts` (generated `VuedoProps`), `dev.test.ts`
-  drives `createVuedo` in development mode covering both paths — with an explicit
+  dotted names), `types.test.ts` (generated `PandafProps`), `dev.test.ts`
+  drives `createPandaf` in development mode covering both paths — with an explicit
   `devServer` (for lifecycle control) and without (library auto-creates from
-  `vite.config.ts`); `manifest.prod.test.ts` runs the real build via the vuedo
+  `vite.config.ts`); `manifest.prod.test.ts` runs the real build via the pandaf
   Vite plugin then renders via the manifest in production mode.
 - **Consumer** (`examples/vue/test`): `app.test.ts` hits each typed Elysia route with
   `?preview=html` (no Gotenberg) and checks TypeBox validation (422 on a missing

@@ -10,7 +10,7 @@ export type RenderMod = (
   section?: string,
 ) => Promise<string>;
 
-export interface VuedoRenderer {
+export interface PandafRenderer {
   render(name: string, data: unknown, section?: string): Promise<string>;
   layoutOf(name: string): Promise<{ header?: string; footer?: string }>;
   resolveCss(): Promise<string>;
@@ -21,7 +21,7 @@ async function resolveCssFile(cssOutput: string): Promise<string> {
   try {
     return await fs.readFile(cssOutput, "utf-8");
   } catch {
-    console.warn(`[vuedo] Failed to read CSS output from ${cssOutput}`);
+    console.warn(`[pandaf] Failed to read CSS output from ${cssOutput}`);
     return "";
   }
 }
@@ -36,7 +36,7 @@ export function createDevRenderer(opts: {
   cssOutput?: string;
   discoverLayouts: (dir: string) => Promise<Discovery>;
   renderMod: RenderMod;
-}): VuedoRenderer {
+}): PandafRenderer {
   let discovery: Discovery | undefined;
   let ownedServer: ViteDevServer | undefined;
 
@@ -108,7 +108,7 @@ export function createProdRenderer(opts: {
   cssOutput: string;
   loadManifest: (path: string) => Promise<PdfManifest>;
   renderMod: RenderMod;
-}): VuedoRenderer {
+}): PandafRenderer {
   let manifest: PdfManifest | undefined;
   let cssCache: string | null = null;
 

@@ -9,7 +9,7 @@ describe("tailwind CSS generation via @tailwindcss/vite plugin", () => {
   let assetsDir: string;
 
   beforeAll(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "vuedo-css-"));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "pandaf-css-"));
     templatesDir = path.join(tmpDir, "templates");
     assetsDir = path.join(tmpDir, "assets");
     await fs.mkdir(templatesDir, { recursive: true });

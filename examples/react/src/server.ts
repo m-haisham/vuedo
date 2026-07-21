@@ -3,19 +3,19 @@ import { node } from "@elysiajs/node";
 import path from "node:path";
 import {
   ChromiumDriver,
-  createVuedo,
+  createPandaf,
   GotenbergDriver,
   InMemoryCache,
   PuppeteerMeasurer,
   type PaperSize,
-} from "@vuedo/react";
+} from "@pandaf/react";
 import { openapi } from "@elysiajs/openapi";
-import type { VuedoProps } from "./generated/vuedo";
+import type { PandafProps } from "./generated/pandaf";
 
 const templatesDir = path.resolve("templates");
 const isDev = process.env.NODE_ENV !== "production";
 
-export const vuedo = createVuedo<VuedoProps>({
+export const pandaf = createPandaf<PandafProps>({
   templatesDir,
   driver: new GotenbergDriver(
     process.env.GOTENBERG_URL ?? "http://localhost:3000",
@@ -28,7 +28,7 @@ export const vuedo = createVuedo<VuedoProps>({
   cache: new InMemoryCache(),
   mode: isDev ? "development" : "production",
   manifestPath: path.resolve("dist/pdf-manifest.json"),
-  css: isDev ? undefined : path.resolve("dist/vuedo.css"),
+  css: isDev ? undefined : path.resolve("dist/pandaf.css"),
 });
 
 const optionsSchema = t.Object({
@@ -169,10 +169,10 @@ export const app = new Elysia({ adapter: node() })
       specPath: "/openapi.json",
       documentation: {
         info: {
-          title: "vuedo PDF Service (React)",
+          title: "pandaf PDF Service (React)",
           version: "1.0.0",
           description:
-            "A small example consumer of `@vuedo/react` that turns React + " +
+            "A small example consumer of `@pandaf/react` that turns React + " +
             "Tailwind templates into PDFs via Gotenberg. Each PDF is its own " +
             "typed route. Send the `{ header?, body, footer?, options }` " +
             "payload as JSON; add `?preview=html` to get the composed SSR " +
@@ -196,7 +196,7 @@ export const app = new Elysia({ adapter: node() })
         spec: { url: "/openapi.json" },
         theme: "default",
         metaData: {
-          title: "vuedo PDF Service (React)",
+          title: "pandaf PDF Service (React)",
           description:
             "Generate and preview PDFs from React + Tailwind templates.",
         },
@@ -207,12 +207,12 @@ export const app = new Elysia({ adapter: node() })
     "/invoice",
     async ({ body, query }) => {
       if (query.preview === "html") {
-        const html = await vuedo.renderComposite("invoice", body);
+        const html = await pandaf.renderComposite("invoice", body);
         return new Response(html, {
           headers: { "Content-Type": "text/html" },
         });
       }
-      return pdfResponse(await vuedo.generatePdf("invoice", body), "invoice");
+      return pdfResponse(await pandaf.generatePdf("invoice", body), "invoice");
     },
     {
       body: invoiceSchema,
@@ -232,13 +232,13 @@ export const app = new Elysia({ adapter: node() })
     "/pos-order",
     async ({ body, query }) => {
       if (query.preview === "html") {
-        const html = await vuedo.renderComposite("pos.pos-order", body);
+        const html = await pandaf.renderComposite("pos.pos-order", body);
         return new Response(html, {
           headers: { "Content-Type": "text/html" },
         });
       }
       return pdfResponse(
-        await vuedo.generatePdf("pos.pos-order", body),
+        await pandaf.generatePdf("pos.pos-order", body),
         "pos-order",
       );
     },
@@ -260,7 +260,7 @@ export const app = new Elysia({ adapter: node() })
     "/invoice/preview",
     async ({ query }) => {
       const VITE_PORT = Number(process.env.VITE_PORT) || 5174;
-      const html = await vuedo.previewHtml("invoice", INVOICE_MOCK, {
+      const html = await pandaf.previewHtml("invoice", INVOICE_MOCK, {
         vitePort: VITE_PORT,
         paperSize: (query.paperSize as PaperSize) ?? "a4",
         downloadUrl: "/invoice/pdf",
@@ -286,7 +286,7 @@ export const app = new Elysia({ adapter: node() })
     "/pos-order/preview",
     async ({ query }) => {
       const VITE_PORT = Number(process.env.VITE_PORT) || 5174;
-      const html = await vuedo.previewHtml("pos.pos-order", POS_ORDER_MOCK, {
+      const html = await pandaf.previewHtml("pos.pos-order", POS_ORDER_MOCK, {
         vitePort: VITE_PORT,
         paperSize: (query.paperSize as PaperSize) ?? "a4",
         downloadUrl: "/pos-order/pdf",
@@ -312,7 +312,7 @@ export const app = new Elysia({ adapter: node() })
     "/invoice/pdf",
     async () => {
       return pdfResponse(
-        await vuedo.generatePdf("invoice", INVOICE_MOCK),
+        await pandaf.generatePdf("invoice", INVOICE_MOCK),
         "invoice",
       );
     },
@@ -329,7 +329,7 @@ export const app = new Elysia({ adapter: node() })
     "/pos-order/pdf",
     async () => {
       return pdfResponse(
-        await vuedo.generatePdf("pos.pos-order", POS_ORDER_MOCK),
+        await pandaf.generatePdf("pos.pos-order", POS_ORDER_MOCK),
         "pos-order",
       );
     },
@@ -363,5 +363,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.env.NODE_ENV === "production"
       ? "prod, manifest"
       : "dev, live templates";
-  console.log(`🦊 vuedo (React) running (${mode}) on :8081`);
+  console.log(`🦊 pandaf (React) running (${mode}) on :8081`);
 }

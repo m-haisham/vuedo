@@ -1,6 +1,6 @@
 dist/
 generated/
-.vuedo-build-*.ts
+.pandaf-build-*.ts
 .tmp-dist/
 .single/
 *.tsbuildinfo

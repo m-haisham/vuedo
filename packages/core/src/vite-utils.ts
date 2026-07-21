@@ -1,7 +1,7 @@
 import type { ViteDevServer } from "vite";
 import path from "node:path";
 
-export interface VuedoPluginOptions {
+export interface PandafPluginOptions {
   templatesDir: string;
   outDir?: string;
   typesOut?: string;
@@ -22,7 +22,7 @@ export function getVitePort(
   return server.config.server.port;
 }
 
-export function resolvePluginOpts(opts: VuedoPluginOptions): {
+export function resolvePluginOpts(opts: PandafPluginOptions): {
   outDir: string;
   typesOut: string;
   cssEntry: string | undefined;
@@ -30,10 +30,10 @@ export function resolvePluginOpts(opts: VuedoPluginOptions): {
 } {
   const outDir = opts.outDir ?? "dist";
   const typesOut =
-    opts.typesOut ?? path.resolve(process.cwd(), "src/generated/vuedo.d.ts");
+    opts.typesOut ?? path.resolve(process.cwd(), "src/generated/pandaf.d.ts");
   const cssEntry = opts.cssEntry ? path.resolve(opts.cssEntry) : undefined;
   const cssDevOut = cssEntry
-    ? path.resolve(process.cwd(), ".vuedo", "vuedo.css")
+    ? path.resolve(process.cwd(), ".pandaf", "pandaf.css")
     : undefined;
   return { outDir, typesOut, cssEntry, cssDevOut };
 }

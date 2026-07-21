@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from "vitest";
-import { app, vuedo } from "../src/server";
+import { app, pandaf } from "../src/server";
 
 const post = (path: string, body: unknown, qs = "") =>
   app.handle(
@@ -10,7 +10,7 @@ const post = (path: string, body: unknown, qs = "") =>
     }),
   );
 
-afterAll(() => vuedo.close());
+afterAll(() => pandaf.close());
 
 describe("service POST /invoice", () => {
   it("composes body + paired header/footer via ?preview=html", async () => {
@@ -44,8 +44,8 @@ describe("service POST /invoice", () => {
     expect(html).toContain("React Co");
     expect(html).toContain("React Studio");
     expect(html).toContain("Thank you for your business!");
-    expect(html).toContain('class="vuedo-header"');
-    expect(html).toContain('class="vuedo-footer"');
+    expect(html).toContain('class="pandaf-header"');
+    expect(html).toContain('class="pandaf-footer"');
   });
 
   it("returns 422 when a required section is missing", async () => {
@@ -91,8 +91,8 @@ describe("service POST /pos-order", () => {
     expect(html).toContain("ORD-R42");
     expect(html).toContain("Downtown React");
     expect(html).toContain("Thanks — see you again!");
-    expect(html).toContain('class="vuedo-header"');
-    expect(html).toContain('class="vuedo-footer"');
+    expect(html).toContain('class="pandaf-header"');
+    expect(html).toContain('class="pandaf-footer"');
   });
 });
 

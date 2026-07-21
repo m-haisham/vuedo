@@ -1,5 +1,5 @@
 {
-  "name": "@vuedo/core",
+  "name": "@pandaf/core",
   "version": "0.1.0",
   "description": "Framework-agnostic HTML → PDF generation primitives",
   "type": "module",

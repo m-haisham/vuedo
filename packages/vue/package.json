@@ -1,7 +1,7 @@
 {
-  "name": "@vuedo/vue",
+  "name": "@pandaf/vue",
   "version": "0.1.0",
-  "description": "Vue SSR → PDF generation using @vuedo/core",
+  "description": "Vue SSR → PDF generation using @pandaf/core",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -24,7 +24,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@vuedo/core": "workspace:*",
+    "@pandaf/core": "workspace:*",
     "@tailwindcss/vite": "^4.0.0",
     "@vitejs/plugin-vue": "^5.0.0",
     "@vue/server-renderer": "^3.4.0",

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// @vuedo/core — framework-agnostic primitives for PDF generation
+// @pandaf/core — framework-agnostic primitives for PDF generation
 // ---------------------------------------------------------------------------
 //
 // This package provides the low-level building blocks:
@@ -11,7 +11,7 @@
 //   - Pluggable cache backends (memory, Redis, noop)
 //   - Shared renderer factories and layout types for framework adapters
 //
-// Framework adapters (@vuedo/vue, @vuedo/react, etc.) build on top of
+// Framework adapters (@pandaf/vue, @pandaf/react, etc.) build on top of
 // this package to provide SSR + template discovery for their framework.
 // ---------------------------------------------------------------------------
 
@@ -56,11 +56,11 @@ export {
   createDevRenderer,
   createProdRenderer,
   type RenderMod,
-  type VuedoRenderer,
+  type PandafRenderer,
 } from "./renderer.js";
 
 export {
   getVitePort,
   resolvePluginOpts,
-  type VuedoPluginOptions,
+  type PandafPluginOptions,
 } from "./vite-utils.js";

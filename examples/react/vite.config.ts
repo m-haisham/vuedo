@@ -1,14 +1,14 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { vuedo } from "@vuedo/react/vite";
+import { pandaf } from "@pandaf/react/vite";
 import path from "node:path";
 
 export default defineConfig({
   plugins: [
     tailwindcss(),
     react(),
-    vuedo({
+    pandaf({
       templatesDir: path.resolve("templates"),
       outDir: "dist",
       cssEntry: "assets/app.css",

@@ -42,7 +42,7 @@ describe("discoverLayouts — file-based layout pairing", () => {
   });
 
   it("auto-detects views/ subdirectory and ignores components/", async () => {
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "vuedo-disc-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "pandaf-disc-"));
     const write = async (rel: string, content: string) => {
       const p = path.join(dir, rel);
       await fs.mkdir(path.dirname(p), { recursive: true });
@@ -78,7 +78,7 @@ describe("discoverLayouts — file-based layout pairing", () => {
   });
 
   it("also pairs kebab-case -header/-footer suffixes", async () => {
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "vuedo-disc-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "pandaf-disc-"));
     const write = async (rel: string, content: string) => {
       const p = path.join(dir, rel);
       await fs.mkdir(path.dirname(p), { recursive: true });

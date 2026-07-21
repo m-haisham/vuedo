@@ -18,12 +18,12 @@ coverage/
 .single/
 
 # Library build: transient vite config written next to dist/cli.js
-packages/*/.vuedo-build-*.ts
+packages/*/.pandaf-build-*.ts
 
-# Dev-only artifacts (CSS, types, etc.) emitted by @hshm/vuedo
-.vuedo/
+# Dev-only artifacts (CSS, types, etc.) emitted by @hshm/pandaf
+.pandaf/
 
-# Generated template-props types (emitted by @hshm/vuedo on build / `vuedo types)
+# Generated template-props types (emitted by @hshm/pandaf on build / `pandaf types)
 examples/*/src/generated/
 
 # Turbo

@@ -21,7 +21,7 @@ export interface PreviewHtmlOptions {
   /**
    * Port of the running Vite dev server. When set, the preview page includes
    * a WebSocket client that connects to Vite's HMR WebSocket and reloads the
-   * page on `vuedo:reload` events. Omit when the preview is served from the
+   * page on `pandaf:reload` events. Omit when the preview is served from the
    * same origin as Vite (the Vite middleware path).
    */
   vitePort?: number;
@@ -44,7 +44,7 @@ function hmrClient(vitePort?: number): string {
     "  ws.onmessage = function(e) {",
     "    try {",
     '      var d = JSON.parse(e.data);',
-    '      if (d.type === "custom" && d.event === "vuedo:reload") location.reload();',
+    '      if (d.type === "custom" && d.event === "pandaf:reload") location.reload();',
     "    } catch(e) {}",
     "  };",
     "  ws.onclose = function() { setTimeout(function() { location.reload(); }, 3000); };",
@@ -84,9 +84,9 @@ export async function buildPreviewHtml(
 
   const script = [
     "(function(){",
-    '  var page = document.getElementById("vuedo-page");',
-    '  var sel = document.getElementById("vuedo-paper");',
-    '  var dim = document.getElementById("vuedo-dim");',
+    '  var page = document.getElementById("pandaf-page");',
+    '  var sel = document.getElementById("pandaf-paper");',
+    '  var dim = document.getElementById("pandaf-dim");',
     "  var sizes = " + SIZES_DATA + ";",
     "  var PX_PER_MM = 3.7795;",
     "",
@@ -111,58 +111,58 @@ export async function buildPreviewHtml(
     "<head>",
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
-    "<title>vuedo Preview</title>",
+    "<title>pandaf Preview</title>",
     cssStyle,
     "<style>",
     "  body { background: #e5e7eb; margin: 0; display: flex; flex-direction: column; align-items: center; padding: 72px 16px 48px; }",
-    "  .vuedo-toolbar {",
+    "  .pandaf-toolbar {",
     "    position: fixed; top: 0; left: 0; right: 0; z-index: 100;",
     "    height: 48px; background: #1f2937; color: #f9fafb;",
     "    display: flex; align-items: center; gap: 12px;",
     "    padding: 0 16px; font-size: 14px;",
     "  }",
-    "  .vuedo-toolbar label { color: #9ca3af; }",
-    "  .vuedo-toolbar select {",
+    "  .pandaf-toolbar label { color: #9ca3af; }",
+    "  .pandaf-toolbar select {",
     "    background: #374151; color: #f9fafb;",
     "    border: 1px solid #4b5563; border-radius: 4px;",
     "    padding: 4px 8px; font-size: 13px;",
     "  }",
-    "  .vuedo-toolbar .vuedo-dim { color: #6b7280; font-size: 12px; }",
-    "  .vuedo-toolbar .vuedo-spacer { flex: 1; }",
-    "  .vuedo-toolbar .vuedo-download {",
+    "  .pandaf-toolbar .pandaf-dim { color: #6b7280; font-size: 12px; }",
+    "  .pandaf-toolbar .pandaf-spacer { flex: 1; }",
+    "  .pandaf-toolbar .pandaf-download {",
     "    background: #059669; color: #fff;",
     "    border: none; border-radius: 4px;",
     "    padding: 5px 12px; font-size: 13px; cursor: pointer;",
     "    text-decoration: none; line-height: normal;",
     "  }",
-    "  .vuedo-toolbar .vuedo-download:hover { background: #047857; }",
-    "  .vuedo-page {",
+    "  .pandaf-toolbar .pandaf-download:hover { background: #047857; }",
+    "  .pandaf-page {",
     "    background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.15);",
     "    transition: width .2s; min-height: 200px;",
     "  }",
-    "  .vuedo-page :is(header,.vuedo-header) { page-break-after: avoid; break-after: avoid; }",
-    "  .vuedo-page :is(footer,.vuedo-footer) { page-break-before: avoid; break-before: avoid; }",
+    "  .pandaf-page :is(header,.pandaf-header) { page-break-after: avoid; break-after: avoid; }",
+    "  .pandaf-page :is(footer,.pandaf-footer) { page-break-before: avoid; break-before: avoid; }",
     "</style>",
     "</head>",
     "<body>",
-    '<div class="vuedo-toolbar">',
-    '  <label for="vuedo-paper">Paper:</label>',
-    '  <select id="vuedo-paper">',
+    '<div class="pandaf-toolbar">',
+    '  <label for="pandaf-paper">Paper:</label>',
+    '  <select id="pandaf-paper">',
     optionsHtml,
     "  </select>",
-    '  <span class="vuedo-dim" id="vuedo-dim">' +
+    '  <span class="pandaf-dim" id="pandaf-dim">' +
       size.width +
       " &times; " +
       size.height +
       " mm</span>",
-    '  <span class="vuedo-spacer"></span>',
+    '  <span class="pandaf-spacer"></span>',
     (options.downloadUrl
-      ? '<a class="vuedo-download" href="' +
+      ? '<a class="pandaf-download" href="' +
         options.downloadUrl +
         '">Download PDF</a>'
       : ""),
     "</div>",
-    '<div class="vuedo-page" id="vuedo-page">',
+    '<div class="pandaf-page" id="pandaf-page">',
     "    " + content,
     "  </div>",
     "</div>",

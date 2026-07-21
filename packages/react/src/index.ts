@@ -1,27 +1,27 @@
 import path from "node:path";
 import type { ViteDevServer } from "vite";
 import {
-  type VuedoRenderer,
+  type PandafRenderer,
   createDevRendererEx,
   createProdRendererEx,
 } from "./renderer.js";
-import { wrapBody, wrapHeader, wrapFooter } from "@vuedo/core";
-import { inlineCssAssets, inlineHtmlAssets } from "@vuedo/core";
+import { wrapBody, wrapHeader, wrapFooter } from "@pandaf/core";
+import { inlineCssAssets, inlineHtmlAssets } from "@pandaf/core";
 import {
   type PdfDriver,
   GotenbergDriver,
   type ChromiumMeasurer,
   resolveMargins,
-} from "@vuedo/core";
-import { Cache, NoopCache } from "@vuedo/core";
+} from "@pandaf/core";
+import { Cache, NoopCache } from "@pandaf/core";
 import {
   buildPreviewHtml,
   type PreviewHtmlOptions,
   type PaperSize,
-} from "@vuedo/core";
+} from "@pandaf/core";
 import { renderNamedComponent, type TemplateModule } from "./render-component.js";
 
-export interface VuedoOptions {
+export interface PandafOptions {
   templatesDir?: string;
   driver?: PdfDriver;
   measurer?: ChromiumMeasurer;
@@ -45,7 +45,7 @@ export interface GeneratePdfOptions {
   measureTimeoutMs?: number;
 }
 
-export interface Vuedo<
+export interface Pandaf<
   Props extends Record<string, { body: any; options?: any }> = Record<
     string,
     { body: any }
@@ -71,7 +71,7 @@ export interface Vuedo<
   close(): Promise<void>;
 }
 
-export type { PreviewHtmlOptions, PaperSize } from "@vuedo/core";
+export type { PreviewHtmlOptions, PaperSize } from "@pandaf/core";
 
 export { inlineCssAssets };
 export {
@@ -81,14 +81,14 @@ export {
   ChromiumMeasurer,
   PuppeteerMeasurer,
   resolveMargins,
-} from "@vuedo/core";
+} from "@pandaf/core";
 export type {
   DriverRenderInput,
   ChromiumDriverOptions,
   MarginInput,
-} from "@vuedo/core";
-export { Cache, NoopCache, InMemoryCache, RedisCache } from "@vuedo/core";
-export type { RedisClient } from "@vuedo/core";
+} from "@pandaf/core";
+export { Cache, NoopCache, InMemoryCache, RedisCache } from "@pandaf/core";
+export type { RedisClient } from "@pandaf/core";
 
 // React conventions:
 // 1. File-based: x.tsx (body), x-header.tsx (header), x-footer.tsx (footer)
@@ -99,12 +99,12 @@ export type { RedisClient } from "@vuedo/core";
 // This lets React users write everything in one file while Vue users rely on
 // the file-based convention.
 
-export function createVuedo<
+export function createPandaf<
   Props extends Record<string, { body: any; options?: any }> = Record<
     string,
     { body: any }
   >,
->(options: VuedoOptions): Vuedo<Props> {
+>(options: PandafOptions): Pandaf<Props> {
   const templatesDir =
     options.templatesDir ?? path.join(process.cwd(), "templates");
   const assetsDir =
@@ -114,7 +114,7 @@ export function createVuedo<
     options.driver ??
     (() => {
       throw new Error(
-        "createVuedo requires a render `driver`. Pass " +
+        "createPandaf requires a render `driver`. Pass " +
           "`driver: new GotenbergDriver(url)` or `driver: new ChromiumDriver()`.",
       );
     })();
@@ -134,10 +134,10 @@ export function createVuedo<
   const cssOutput =
     options.css ??
     (isDev
-      ? path.resolve(templatesDir, "..", ".vuedo", "vuedo.css")
-      : path.resolve(path.dirname(manifestPath), "vuedo.css"));
+      ? path.resolve(templatesDir, "..", ".pandaf", "pandaf.css")
+      : path.resolve(path.dirname(manifestPath), "pandaf.css"));
 
-  const renderer: VuedoRenderer = isDev
+  const renderer: PandafRenderer = isDev
     ? createDevRendererEx(templatesDir, options.devServer, cssOutput)
     : createProdRendererEx(manifestPath, cssOutput);
 
@@ -244,9 +244,9 @@ export function createVuedo<
           : await renderSection(template, data.footer, "footer", template)
         : null;
     const sections = [
-      header ? `<div class="vuedo-header">${header}</div>` : "",
-      `<div class="vuedo-body">${body}</div>`,
-      footer ? `<div class="vuedo-footer">${footer}</div>` : "",
+      header ? `<div class="pandaf-header">${header}</div>` : "",
+      `<div class="pandaf-body">${body}</div>`,
+      footer ? `<div class="pandaf-footer">${footer}</div>` : "",
     ].join("\n");
     return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${sections}</body></html>`;
   }
@@ -319,9 +319,9 @@ export function createVuedo<
         : null;
 
     const sections = [
-      header ? '<div class="vuedo-header">' + header + "</div>" : "",
-      '<div class="vuedo-body">' + body + "</div>",
-      footer ? '<div class="vuedo-footer">' + footer + "</div>" : "",
+      header ? '<div class="pandaf-header">' + header + "</div>" : "",
+      '<div class="pandaf-body">' + body + "</div>",
+      footer ? '<div class="pandaf-footer">' + footer + "</div>" : "",
     ].join("\n");
 
     const css = await renderer.resolveCss();

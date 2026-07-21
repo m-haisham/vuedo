@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { TemplateKind, Discovery, DiscoveredLayout } from "@vuedo/core";
+import type { TemplateKind, Discovery, DiscoveredLayout } from "@pandaf/core";
 
 export type { TemplateKind, Discovery, DiscoveredLayout };
 

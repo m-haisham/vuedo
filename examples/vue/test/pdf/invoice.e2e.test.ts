@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { execSync } from "node:child_process";
 import path from "node:path";
-import { createVuedo, GotenbergDriver } from "@vuedo/vue";
+import { createPandaf, GotenbergDriver } from "@pandaf/vue";
 import pdfParse from "pdf-parse";
 
 // Per-template E2E for the `invoice` PDF (§7): exercise the *production*
@@ -31,7 +31,7 @@ describe.skipIf(!gotenbergAvailable)(
   "PDF generation — invoice (production kit + real Gotenberg, E2E, §7)",
   () => {
     beforeAll(() => {
-      // Real production build via the vuedo Vite plugin → dist/ + manifest.
+      // Real production build via the pandaf Vite plugin → dist/ + manifest.
       execSync("pnpm build --logLevel error", {
         cwd: process.cwd(),
         stdio: "inherit",
@@ -39,12 +39,12 @@ describe.skipIf(!gotenbergAvailable)(
     }, 120_000);
 
     it("renders body + auto-paired header/footer and returns a real PDF", async () => {
-      const kit = createVuedo({
+      const kit = createPandaf({
         templatesDir: path.resolve("templates"),
         driver: new GotenbergDriver(GOTENBERG_URL),
         mode: "production",
         manifestPath: path.resolve("dist/pdf-manifest.json"),
-        css: path.resolve("dist/vuedo.css"),
+        css: path.resolve("dist/pandaf.css"),
       });
 
       const stream = await kit.generatePdf("invoice", {

@@ -1,5 +1,5 @@
 node_modules/
 dist/
-.vuedo/
+.pandaf/
 src/generated/
 *.timestamp-*.mjs

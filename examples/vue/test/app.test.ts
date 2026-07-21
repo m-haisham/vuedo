@@ -1,8 +1,8 @@
 import { describe, it, expect, afterAll } from "vitest";
-import { app, vuedo } from "../src/server";
+import { app, pandaf } from "../src/server";
 
 // Consumer tests (§7): plain requests against the app's own router. No network
-// hop to mock — vuedo renders in-process; ?preview=html avoids Gotenberg. Each
+// hop to mock — pandaf renders in-process; ?preview=html avoids Gotenberg. Each
 // template is its own typed Elysia route, so TypeBox validation guards the
 // { header?, body, footer?, options } payload before it reaches generatePdf.
 const post = (path: string, body: unknown, qs = "") =>
@@ -14,7 +14,7 @@ const post = (path: string, body: unknown, qs = "") =>
     }),
   );
 
-afterAll(() => vuedo.close());
+afterAll(() => pandaf.close());
 
 describe("service POST /invoice", () => {
   it("composes body + paired header/footer via ?preview=html (no Gotenberg)", async () => {
@@ -49,8 +49,8 @@ describe("service POST /invoice", () => {
     // Auto-paired InvoiceHeader / InvoiceFooter from the file convention.
     expect(html).toContain("Northwind Studio");
     expect(html).toContain("Thank you for your business!");
-    expect(html).toContain('class="vuedo-header"');
-    expect(html).toContain('class="vuedo-footer"');
+    expect(html).toContain('class="pandaf-header"');
+    expect(html).toContain('class="pandaf-footer"');
   });
 
   it("returns 422 when a required section is missing", async () => {
@@ -93,8 +93,8 @@ describe("service POST /pos-order", () => {
     expect(html).toContain("ORD-9042");
     expect(html).toContain("Downtown");
     expect(html).toContain("Thanks — see you again!");
-    expect(html).toContain('class="vuedo-header"');
-    expect(html).toContain('class="vuedo-footer"');
+    expect(html).toContain('class="pandaf-header"');
+    expect(html).toContain('class="pandaf-footer"');
   });
 });
 

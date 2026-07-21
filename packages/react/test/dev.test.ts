@@ -3,15 +3,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import react from "@vitejs/plugin-react";
-import { createVuedo, GotenbergDriver } from "../src/index.js";
-import { inlineAssetsPlugin } from "@vuedo/core";
+import { createPandaf, GotenbergDriver } from "../src/index.js";
+import { inlineAssetsPlugin } from "@pandaf/core";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const templatesDir = path.resolve(dir, "fixtures/templates");
 
-describe("createVuedo — dev mode with explicit devServer", () => {
+describe("createPandaf — dev mode with explicit devServer", () => {
   let devServer: Awaited<ReturnType<typeof createServer>>;
-  let kit: ReturnType<typeof createVuedo>;
+  let kit: ReturnType<typeof createPandaf>;
 
   beforeAll(async () => {
     devServer = await createServer({
@@ -23,7 +23,7 @@ describe("createVuedo — dev mode with explicit devServer", () => {
       css: { devSourcemap: false },
     });
 
-    kit = createVuedo({
+    kit = createPandaf({
       templatesDir,
       driver: new GotenbergDriver("http://unused.local"),
       mode: "development",
@@ -37,9 +37,9 @@ describe("createVuedo — dev mode with explicit devServer", () => {
   });
 
   it("SSR-renders a fixture body template", async () => {
-    const html = await kit.renderHtml("Hello", { name: "Vuedo" });
+    const html = await kit.renderHtml("Hello", { name: "Pandaf" });
     expect(html).toContain("Hello");
-    expect(html).toContain("Vuedo");
+    expect(html).toContain("Pandaf");
     expect(html).toContain("<!DOCTYPE html>");
   });
 
@@ -52,7 +52,7 @@ describe("createVuedo — dev mode with explicit devServer", () => {
     expect(html).toContain("Card");
     expect(html).toContain("X");
     expect(html).toContain("CARD HEADER");
-    expect(html).toContain('class="vuedo-header"');
+    expect(html).toContain('class="pandaf-header"');
   });
 
   it("close() does not close the consumer's devServer", async () => {
@@ -61,9 +61,9 @@ describe("createVuedo — dev mode with explicit devServer", () => {
   });
 });
 
-describe("createVuedo — dev mode without devServer (auto-created)", () => {
+describe("createPandaf — dev mode without devServer (auto-created)", () => {
   it("lazy-creates a Vite server on first render and closes it", async () => {
-    const kit = createVuedo({
+    const kit = createPandaf({
       templatesDir,
       driver: new GotenbergDriver("http://unused.local"),
       mode: "development",
@@ -83,10 +83,10 @@ describe("createVuedo — dev mode without devServer (auto-created)", () => {
 // passes props to it.
 // ---------------------------------------------------------------------------
 
-describe("createVuedo — views/ convention with reusable component", () => {
+describe("createPandaf — views/ convention with reusable component", () => {
   const viewsDir = path.resolve(dir, "fixtures/templates-structured");
   let devServer: Awaited<ReturnType<typeof createServer>>;
-  let kit: ReturnType<typeof createVuedo>;
+  let kit: ReturnType<typeof createPandaf>;
 
   beforeAll(async () => {
     devServer = await createServer({
@@ -98,7 +98,7 @@ describe("createVuedo — views/ convention with reusable component", () => {
       css: { devSourcemap: false },
     });
 
-    kit = createVuedo({
+    kit = createPandaf({
       templatesDir: viewsDir,
       driver: new GotenbergDriver("http://unused.local"),
       mode: "development",
