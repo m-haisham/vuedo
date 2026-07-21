@@ -25,6 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   single-file React convention.
 - **react:** Package tests (discover, dev mode, manifest production, types)
   and consumer tests (router + E2E with real Gotenberg).
+- **vue:** `discoverLayouts()` now auto-detects a `views/` subdirectory inside
+  `templatesDir` — when present, only files under `views/` are discovered as
+  templates, and reusable components live in `templates/components/`. Template
+  names stay clean (`views/invoice.vue` → `invoice`). When no `views/` directory
+  exists, discovery walks `templatesDir` as before (fully backwards-compatible).
+- **react:** `discoverLayouts()` also auto-detects a `views/` subdirectory
+  inside `templatesDir` for `.tsx` templates, matching the Vue convention.
+  Reusable `.tsx` components in `templates/components/` are imported by views
+  and are not discovered as template entries.
+- **examples:** Both Vue and React example consumers now use the
+  `templates/views/` + `templates/components/` convention. A reusable
+  `MoneyAmount` component (with `amount`, `bold`, `className` props) is imported
+  by both the invoice and POS receipt templates.
 
 ### Changed
 

@@ -3,7 +3,7 @@
     <div class="text-lg font-bold tracking-wide">{{ store }}</div>
     <div class="text-xs">{{ address }}</div>
     <div class="text-sm font-semibold mt-1">ORDER RECEIPT</div>
-    <div class="text-xs mt-1">#{{ orderNumber }} · {{ date }}</div>
+    <div class="text-xs mt-1">#{{ orderNumber }} &middot; {{ date }}</div>
     <div class="text-xs">Cashier: {{ cashier }}</div>
   </header>
 </template>

@@ -1,14 +1,11 @@
 import { useMemo } from "react";
+import { MoneyAmount } from "../components/MoneyAmount";
 
 interface InvoiceBodyProps {
   billTo: { name: string; company?: string; address: string };
   items: { description: string; qty: number; unitPrice: number }[];
   taxRate: number;
   notes?: string;
-}
-
-function formatMoney(amount: number): string {
-  return "$" + amount.toFixed(2);
 }
 
 export function Body({ billTo, items, taxRate, notes }: InvoiceBodyProps) {
@@ -46,11 +43,11 @@ export function Body({ billTo, items, taxRate, notes }: InvoiceBodyProps) {
             <tr key={i} className="border-b border-slate-200">
               <td className="py-2">{item.description}</td>
               <td className="py-2 text-right tabular-nums">{item.qty}</td>
-              <td className="py-2 text-right tabular-nums">
-                {formatMoney(item.unitPrice)}
+              <td className="py-2 text-right">
+                <MoneyAmount amount={item.unitPrice} />
               </td>
-              <td className="py-2 text-right tabular-nums">
-                {formatMoney(item.unitPrice * item.qty)}
+              <td className="py-2 text-right">
+                <MoneyAmount amount={item.unitPrice * item.qty} />
               </td>
             </tr>
           ))}
@@ -61,19 +58,15 @@ export function Body({ billTo, items, taxRate, notes }: InvoiceBodyProps) {
         <div className="w-64 text-sm">
           <div className="flex justify-between py-1 text-slate-600">
             <span>Subtotal</span>
-            <span className="tabular-nums">{formatMoney(subtotal)}</span>
+            <MoneyAmount amount={subtotal} />
           </div>
           <div className="flex justify-between py-1 text-slate-600">
             <span>Tax ({Math.round(taxRate * 100)}%)</span>
-            <span className="tabular-nums">
-              {formatMoney(subtotal * taxRate)}
-            </span>
+            <MoneyAmount amount={subtotal * taxRate} />
           </div>
           <div className="flex justify-between py-2 mt-1 border-t-2 border-slate-900 font-bold text-lg">
             <span>Total</span>
-            <span className="tabular-nums">
-              {formatMoney(subtotal * (1 + taxRate))}
-            </span>
+            <MoneyAmount amount={subtotal * (1 + taxRate)} bold />
           </div>
         </div>
       </div>

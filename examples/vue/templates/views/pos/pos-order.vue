@@ -4,25 +4,30 @@
       <div v-for="(item, i) in items" :key="i" class="py-1">
         <div class="flex justify-between">
           <span>{{ item.name }}</span>
-          <span>{{ formatMoney(item.price * item.qty) }}</span>
+          <MoneyAmount :amount="item.price * item.qty" />
         </div>
         <div class="text-xs text-slate-500">
-          {{ item.qty }} × {{ formatMoney(item.price) }}
+          {{ item.qty }} &times;
+          <MoneyAmount :amount="item.price" />
         </div>
       </div>
     </div>
     <div class="border-t-2 border-dashed border-slate-800 mt-2 pt-2 space-y-1">
       <div class="flex justify-between">
-        <span>Subtotal</span><span>{{ formatMoney(subtotal) }}</span>
+        <span>Subtotal</span>
+        <MoneyAmount :amount="subtotal" />
       </div>
       <div class="flex justify-between">
-        <span>Tax</span><span>{{ formatMoney(tax) }}</span>
+        <span>Tax</span>
+        <MoneyAmount :amount="tax" />
       </div>
       <div class="flex justify-between font-bold text-base">
-        <span>TOTAL</span><span>{{ formatMoney(total) }}</span>
+        <span>TOTAL</span>
+        <MoneyAmount :amount="total" bold />
       </div>
       <div class="flex justify-between text-xs text-slate-500">
-        <span>Paid via</span><span>{{ paymentMethod }}</span>
+        <span>Paid via</span>
+        <span>{{ paymentMethod }}</span>
       </div>
     </div>
   </section>
@@ -30,6 +35,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import MoneyAmount from "../../components/MoneyAmount.vue";
 
 const props = defineProps<{
   items: { name: string; qty: number; price: number }[];
@@ -41,8 +47,4 @@ const props = defineProps<{
 const subtotal = computed(() =>
   props.items.reduce((sum, item) => sum + item.price * item.qty, 0),
 );
-
-function formatMoney(amount: number): string {
-  return "$" + amount.toFixed(2);
-}
 </script>

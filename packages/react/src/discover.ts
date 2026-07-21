@@ -39,8 +39,17 @@ async function walk(dir: string, root: string, out: string[]): Promise<void> {
 // precedence when they exist; otherwise the renderer checks the body
 // module for named Header/Footer exports at render time.
 export async function discoverLayouts(templatesDir: string): Promise<Discovery> {
+  const viewsDir = path.resolve(templatesDir, "views");
+  let scanRoot = templatesDir;
+  try {
+    const stat = await fs.stat(viewsDir);
+    if (stat.isDirectory()) scanRoot = viewsDir;
+  } catch {
+    /* no views/ dir — use templatesDir as before */
+  }
+
   const rels: string[] = [];
-  await walk(templatesDir, templatesDir, rels);
+  await walk(scanRoot, scanRoot, rels);
 
   const entries: Record<string, string> = {};
   const bodies = new Set<string>();
@@ -48,7 +57,7 @@ export async function discoverLayouts(templatesDir: string): Promise<Discovery> 
 
   for (const rel of rels) {
     const dotted = toDotted(rel);
-    entries[dotted] = path.resolve(templatesDir, rel);
+    entries[dotted] = path.resolve(scanRoot, rel);
 
     const segs = dotted.split(".");
     const last = segs[segs.length - 1];

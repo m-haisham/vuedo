@@ -41,6 +41,42 @@ describe("discoverLayouts — file-based layout pairing", () => {
     });
   });
 
+  it("auto-detects views/ subdirectory and ignores components/", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "vuedo-disc-"));
+    const write = async (rel: string, content: string) => {
+      const p = path.join(dir, rel);
+      await fs.mkdir(path.dirname(p), { recursive: true });
+      await fs.writeFile(p, content);
+    };
+    // Templates under views/ are discovered
+    await write("views/invoice.vue", "<template><div>A</div></template>");
+    await write(
+      "views/invoice-header.vue",
+      "<template><div>A-H</div></template>",
+    );
+    // Components under components/ are NOT discovered as templates
+    await write(
+      "components/MoneyFormat.vue",
+      "<template><span>{{ amount }}</span></template>",
+    );
+    // Root-level files are also ignored when views/ exists
+    await write("orphan.vue", "<template><div>O</div></template>");
+
+    const disc = await discoverLayouts(dir);
+
+    // Only views/ content appears
+    expect(disc.entries["invoice"]).toBeDefined();
+    expect(disc.entries["invoice-header"]).toBeDefined();
+    expect(disc.entries["components.MoneyFormat"]).toBeUndefined();
+    expect(disc.entries["orphan"]).toBeUndefined();
+
+    expect(disc.layouts["invoice"]).toEqual({
+      body: "invoice",
+      header: "invoice-header",
+      footer: undefined,
+    });
+  });
+
   it("also pairs kebab-case -header/-footer suffixes", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "vuedo-disc-"));
     const write = async (rel: string, content: string) => {

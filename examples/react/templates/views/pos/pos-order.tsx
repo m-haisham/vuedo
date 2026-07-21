@@ -1,14 +1,11 @@
 import { useMemo } from "react";
+import { MoneyAmount } from "../../components/MoneyAmount";
 
 interface PosBodyProps {
   items: { name: string; qty: number; price: number }[];
   tax: number;
   total: number;
   paymentMethod: string;
-}
-
-function formatMoney(amount: number): string {
-  return "$" + amount.toFixed(2);
 }
 
 export function Body({ items, tax, total, paymentMethod }: PosBodyProps) {
@@ -24,10 +21,11 @@ export function Body({ items, tax, total, paymentMethod }: PosBodyProps) {
           <div key={i} className="py-1">
             <div className="flex justify-between">
               <span>{item.name}</span>
-              <span>{formatMoney(item.price * item.qty)}</span>
+              <MoneyAmount amount={item.price * item.qty} />
             </div>
             <div className="text-xs text-slate-500">
-              {item.qty} × {formatMoney(item.price)}
+              {item.qty} &times;{" "}
+              <MoneyAmount amount={item.price} />
             </div>
           </div>
         ))}
@@ -35,15 +33,15 @@ export function Body({ items, tax, total, paymentMethod }: PosBodyProps) {
       <div className="border-t-2 border-dashed border-slate-800 mt-2 pt-2 space-y-1">
         <div className="flex justify-between">
           <span>Subtotal</span>
-          <span>{formatMoney(subtotal)}</span>
+          <MoneyAmount amount={subtotal} />
         </div>
         <div className="flex justify-between">
           <span>Tax</span>
-          <span>{formatMoney(tax)}</span>
+          <MoneyAmount amount={tax} />
         </div>
         <div className="flex justify-between font-bold text-base">
           <span>TOTAL</span>
-          <span>{formatMoney(total)}</span>
+          <MoneyAmount amount={total} bold />
         </div>
         <div className="flex justify-between text-xs text-slate-500">
           <span>Paid via</span>
@@ -75,7 +73,7 @@ export function Header({
       <div className="text-xs">{address}</div>
       <div className="text-sm font-semibold mt-1">ORDER RECEIPT</div>
       <div className="text-xs mt-1">
-        #{orderNumber} · {date}
+        #{orderNumber} &middot; {date}
       </div>
       <div className="text-xs">Cashier: {cashier}</div>
     </header>

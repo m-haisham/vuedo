@@ -226,6 +226,11 @@ A template's layout (body + optional header/footer) is inferred from filenames i
 - `XHeader.vue` / `XFooter.vue` → paired header/footer (legacy PascalCase).
 - Subdirectories are allowed: `pos/pos-header.vue` pairs with `pos/pos-order.vue`.
 - A template name is its relative path with `/` → `.` (`pos/pos-order`).
+- **views/ convention**: when a `views/` subdirectory exists inside
+  `templatesDir`, discovery scans only that directory for templates. Reusable
+  components belong in `templates/components/` — they are imported by views and
+  are not discovered as template entries. Template names stay clean:
+  `views/invoice.vue` becomes `invoice`, not `views.invoice`.
 
 ### 4.3.2 Inferred Template Types
 

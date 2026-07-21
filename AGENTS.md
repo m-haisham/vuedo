@@ -116,12 +116,15 @@ No `cli.ts` or `dev-registry.ts` — these have been removed.
 
 ```
 templates/         Vue SFCs — the PDF templates (file-based layout convention, §below).
-                    Lowercase kebab-case filenames (Nuxt-style):
-  invoice.vue         body
-  invoice-header.vue  header (auto-pairs with invoice)
-  invoice-footer.vue  footer (auto-pairs with invoice)
-  pos/pos-order.vue   nested body
-  pos/pos-header.vue  header (auto-pairs with pos.pos-order via folder convention)
+                    Lowercase kebab-case filenames (Nuxt-style).
+  components/      Reusable Vue SFCs imported by view templates.
+    MoneyAmount.vue  Shared formatting component (takes `amount` prop).
+  views/           Discovered template files (auto-detected when present).
+    invoice.vue         body
+    invoice-header.vue  header (auto-pairs with invoice)
+    invoice-footer.vue  footer (auto-pairs with invoice)
+    pos/pos-order.vue   nested body
+    pos/pos-header.vue  header (auto-pairs with pos.pos-order via folder convention)
 assets/            static assets referenced by templates (images + fonts, base64-inlined)
   app.css           Tailwind v4 entry — compiled by @vuedo/vue itself (no build step in the service)
   logo.png
@@ -161,6 +164,11 @@ the template filenames (`packages/vue/src/discover.ts`):
   parent folder, `pos`, which matches the longest body `pos.pos-order`).
 - A template name is its path with `/` → `.` (`pos/pos-order` → `pos.pos-order`).
 - An aux file whose base matches no body is an orphan (compiled but unused).
+- **views/ convention**: when a `views/` subdirectory exists inside `templatesDir`,
+  discovery scans only that directory for templates. Reusable components belong
+  in `templates/components/` (imported by views, not discovered as template
+  entries). Template names stay clean — `views/invoice.vue` becomes `invoice`,
+  not `views.invoice`.
 
 `createVuedo().generatePdf(name, data)` resolves the layout automatically and
 renders body + the paired header/footer. The `data` object carries each

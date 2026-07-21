@@ -30,11 +30,11 @@
         >
           <td class="py-2">{{ item.description }}</td>
           <td class="py-2 text-right tabular-nums">{{ item.qty }}</td>
-          <td class="py-2 text-right tabular-nums">
-            {{ formatMoney(item.unitPrice) }}
+          <td class="py-2 text-right">
+            <MoneyAmount :amount="item.unitPrice" />
           </td>
-          <td class="py-2 text-right tabular-nums">
-            {{ formatMoney(item.unitPrice * item.qty) }}
+          <td class="py-2 text-right">
+            <MoneyAmount :amount="item.unitPrice * item.qty" />
           </td>
         </tr>
       </tbody>
@@ -44,19 +44,17 @@
       <div class="w-64 text-sm">
         <div class="flex justify-between py-1 text-slate-600">
           <span>Subtotal</span>
-          <span class="tabular-nums">{{ formatMoney(subtotal) }}</span>
+          <MoneyAmount :amount="subtotal" />
         </div>
         <div class="flex justify-between py-1 text-slate-600">
           <span>Tax ({{ Math.round(taxRate * 100) }}%)</span>
-          <span class="tabular-nums">{{ formatMoney(subtotal * taxRate) }}</span>
+          <MoneyAmount :amount="subtotal * taxRate" />
         </div>
         <div
           class="flex justify-between py-2 mt-1 border-t-2 border-slate-900 font-bold text-lg"
         >
           <span>Total</span>
-          <span class="tabular-nums">
-            {{ formatMoney(subtotal * (1 + taxRate)) }}
-          </span>
+          <MoneyAmount :amount="subtotal * (1 + taxRate)" bold />
         </div>
       </div>
     </div>
@@ -67,6 +65,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import MoneyAmount from "../components/MoneyAmount.vue";
 
 const props = defineProps<{
   billTo: { name: string; company?: string; address: string };
@@ -78,8 +77,4 @@ const props = defineProps<{
 const subtotal = computed(() =>
   props.items.reduce((sum, item) => sum + item.unitPrice * item.qty, 0),
 );
-
-function formatMoney(amount: number): string {
-  return "$" + amount.toFixed(2);
-}
 </script>

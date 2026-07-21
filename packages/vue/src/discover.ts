@@ -38,8 +38,21 @@ async function walk(dir: string, root: string, out: string[]): Promise<void> {
 // Subdirectories are allowed and matched within their own folder
 // (Pos/PosHeader.vue pairs with Pos/PosOrder.vue).
 export async function discoverLayouts(templatesDir: string): Promise<Discovery> {
+  // When the consumer follows the Vue/React convention and places templates
+  // under a `views/` subdirectory, we walk from there so template names stay
+  // clean ("invoice" rather than "views.invoice").  Components in `components/`
+  // are imported by views and are not discovered as template entries.
+  const viewsDir = path.resolve(templatesDir, "views");
+  let scanRoot = templatesDir;
+  try {
+    const stat = await fs.stat(viewsDir);
+    if (stat.isDirectory()) scanRoot = viewsDir;
+  } catch {
+    /* no views/ dir — use templatesDir as before */
+  }
+
   const rels: string[] = [];
-  await walk(templatesDir, templatesDir, rels);
+  await walk(scanRoot, scanRoot, rels);
 
   const entries: Record<string, string> = {};
   const bodies = new Set<string>();
@@ -47,7 +60,7 @@ export async function discoverLayouts(templatesDir: string): Promise<Discovery> 
 
   for (const rel of rels) {
     const dotted = toDotted(rel);
-    entries[dotted] = path.resolve(templatesDir, rel);
+    entries[dotted] = path.resolve(scanRoot, rel);
 
     // Classify by the LAST dotted segment so nested templates (Pos.pos-header)
     // are handled correctly. Supports both kebab (-header/-footer) and legacy

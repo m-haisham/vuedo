@@ -68,6 +68,38 @@ describe("discoverLayouts — file-based layout pairing (.tsx)", () => {
     });
   });
 
+  it("auto-detects views/ subdirectory and ignores components/", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "vuedo-react-disc-"));
+    const write = async (rel: string, content: string) => {
+      const p = path.join(dir, rel);
+      await fs.mkdir(path.dirname(p), { recursive: true });
+      await fs.writeFile(p, content);
+    };
+    await write("views/invoice.tsx", "export function Body() { return null; }");
+    await write(
+      "views/invoice-header.tsx",
+      "export function Header() { return null; }",
+    );
+    await write(
+      "components/MoneyFormat.tsx",
+      "export function MoneyFormat() { return null; }",
+    );
+    await write("orphan.tsx", "export function Body() { return null; }");
+
+    const disc = await discoverLayouts(dir);
+
+    expect(disc.entries["invoice"]).toBeDefined();
+    expect(disc.entries["invoice-header"]).toBeDefined();
+    expect(disc.entries["components.MoneyFormat"]).toBeUndefined();
+    expect(disc.entries["orphan"]).toBeUndefined();
+
+    expect(disc.layouts["invoice"]).toEqual({
+      body: "invoice",
+      header: "invoice-header",
+      footer: undefined,
+    });
+  });
+
   it("ignores non-.tsx files", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "vuedo-react-disc-"));
     const write = async (rel: string, content: string) => {
