@@ -1,6 +1,6 @@
 {
   "name": "@pandaf/vue",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Vue SSR → PDF generation using @pandaf/core",
   "license": "MIT",
   "type": "module",

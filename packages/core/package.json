@@ -1,6 +1,6 @@
 {
   "name": "@pandaf/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Framework-agnostic HTML → PDF generation primitives",
   "license": "MIT",
   "type": "module",
