@@ -9,11 +9,15 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./vite": {
       "types": "./dist/vite-plugin.d.ts",
-      "import": "./dist/vite-plugin.js"
+      "import": "./dist/vite-plugin.js",
+      "require": "./dist/vite-plugin.js",
+      "default": "./dist/vite-plugin.js"
     },
     "./package.json": "./package.json"
   },
