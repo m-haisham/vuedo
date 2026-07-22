@@ -26,9 +26,9 @@
     "directory": "packages/react"
   },
   "bugs": {
-    "url": "https://github.com/m-haisham/vuedo/issues"
+    "url": "https://github.com/m-haisham/pandaf/issues"
   },
-  "homepage": "https://github.com/m-haisham/vuedo#readme",
+  "homepage": "https://github.com/m-haisham/pandaf#readme",
   "engines": {
     "node": ">=18"
   },
